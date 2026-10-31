@@ -25,7 +25,9 @@
 #define ROOT_HANDLER_NAME "root"
 #define DEFAULT NULL
 #define DEFAULT_LEVEL LOG_INFO
-#define DEFAULT_STRAEM stderr
+
+// Fix typo and change it to stdout - TheMonHub
+#define DEFAULT_STREAM stdout
 #define DEFAULT_FILE_NAME "logger/program.log"
 #define DEFAULT_FILE_MODE "a"
 #define DEFAULT_DATE_FORMAT1 "%H:%M:%S"                  // HH:MM:SS
@@ -71,12 +73,19 @@ struct record {
 };
 
 int log_add_file_handler(const char *filename, const char *filemode,
-                         size_t level, const char *name);
-int log_add_stream_handler(FILE *fp, size_t level, const char *name);
+                         size_t level, size_t max_level, const char *name);
+int log_add_stream_handler(FILE *fp, size_t level, size_t max_level, const char *name);
 
 void _log_message(int level, const char *file, int line, const char *msg_fmt,
                   ...);
+
+// Added if defined(NDEBUG) to disable trace logging entirely if it is not debug - TheMonHub
+#if defined(NDEBUG)
+#define log_trace(...)
+#else
 #define log_trace(...) _log_message(LOG_TRACE, __FILE__, __LINE__, __VA_ARGS__)
+#endif
+
 #define log_debug(...) _log_message(LOG_DEBUG, __FILE__, __LINE__, __VA_ARGS__)
 #define log_info(...) _log_message(LOG_INFO, __FILE__, __LINE__, __VA_ARGS__)
 #define log_warn(...) _log_message(LOG_WARN, __FILE__, __LINE__, __VA_ARGS__)
@@ -84,6 +93,7 @@ void _log_message(int level, const char *file, int line, const char *msg_fmt,
 #define log_fatal(...) _log_message(LOG_FATAL, __FILE__, __LINE__, __VA_ARGS__)
 
 void log_set_level(const char *name, size_t value);
+void log_set_max_level(const char *name, size_t value);
 void log_set_quiet(const char *name, bool value);
 void log_set_date_fmt(const char *name, const char *value);
 void log_set_fmt_fn(const char *name, log_fmt_fn value);

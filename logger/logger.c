@@ -20,6 +20,9 @@
  * SOFTWARE.
  */
 
+// Check handler struct definition, its initialization, allowed_members, log_set_max_level,
+// log_add_handler, log_add_stream_handler, log_add_file_handler, and _log_message. Added max level - TheMonHub
+
 #include "logger.h"
 
 #include <assert.h>
@@ -35,6 +38,7 @@ struct handler {
     log_fmt_fn fmt_fn;
     void *fp;
     size_t level;
+    size_t max_level;
     bool quiet;
     const char *date_fmt;
 };
@@ -76,8 +80,9 @@ __attribute__((constructor)) static void init_logger(void)
         .name = ROOT_HANDLER_NAME,
         .dump_fn = dump_log,
         .fmt_fn = color_fmt1,
-        .fp = DEFAULT_STRAEM,
+        .fp = DEFAULT_STREAM,
         .level = LOG_TRACE,
+        .max_level = LOG_LEVEL_MAX,
         .quiet = false,
         .date_fmt = DEFAULT_DATE_FORMAT1,
     };
@@ -85,11 +90,11 @@ __attribute__((constructor)) static void init_logger(void)
 }
 
 static int log_add_handler(const char *name, log_dump_fn dump_fn,
-                           log_fmt_fn fmt_fn, void *fp, size_t level,
+                           log_fmt_fn fmt_fn, void *fp, size_t level, size_t max_level,
                            bool quiet, const char *date_fmt)
 {
     if (L.count == MAX_HANDLERS) {
-        fprintf(DEFAULT_STRAEM,
+        fprintf(DEFAULT_STREAM,
                 "[Logger C] Maximum number of handlers reached: %d\n",
                 MAX_HANDLERS);
         return -1;
@@ -101,6 +106,7 @@ static int log_add_handler(const char *name, log_dump_fn dump_fn,
         .fmt_fn = fmt_fn,
         .fp = fp,
         .level = level,
+        .max_level = max_level,
         .quiet = quiet,
         .date_fmt = date_fmt,
     };
@@ -108,7 +114,7 @@ static int log_add_handler(const char *name, log_dump_fn dump_fn,
 }
 
 int log_add_file_handler(const char *filename, const char *filemode,
-                         size_t level, const char *name)
+                         size_t level, size_t max_level, const char *name)
 {
     assert(level < LOG_LEVEL_MAX);
     assert(name);
@@ -117,21 +123,21 @@ int log_add_file_handler(const char *filename, const char *filemode,
     FILE *fp = fopen(filename, filemode);
 
     if (!fp) {
-        fprintf(DEFAULT_STRAEM, "[Logger C] Unable to open log file: %s\n",
+        fprintf(DEFAULT_STREAM, "[Logger C] Unable to open log file: %s\n",
                 filename);
         return -1;
     }
 
-    return log_add_handler(name, dump_log, no_color_fmt1, fp, level, false,
+    return log_add_handler(name, dump_log, no_color_fmt1, fp, level, max_level, false,
                            DEFAULT_DATE_FORMAT3);
 }
 
-int log_add_stream_handler(FILE *fp, size_t level, const char *name)
+int log_add_stream_handler(FILE *fp, size_t level, size_t max_level, const char *name)
 {
     assert(level < LOG_LEVEL_MAX);
     assert(name);
-    fp = fp ? fp : DEFAULT_STRAEM;
-    return log_add_handler(name, dump_log, color_fmt1, fp, level, false,
+    fp = fp ? fp : DEFAULT_STREAM;
+    return log_add_handler(name, dump_log, color_fmt1, fp, level, max_level, false,
                            DEFAULT_DATE_FORMAT1);
 }
 
@@ -168,7 +174,7 @@ void _log_message(int level, const char *file, int line, const char *msg_fmt,
 
     for (size_t i = ROOT_HANDLER + 1; i < L.count && L.handlers[i].dump_fn; i++) {
         handler_t *hd = &L.handlers[i];
-        if (!hd->quiet && (size_t)level >= hd->level) {
+        if (!hd->quiet && (size_t)level >= hd->level && (size_t)level <= hd->max_level) {
             update_record(&rec, hd);
             va_start(rec.ap, msg_fmt);
             hd->dump_fn(&rec);
@@ -189,6 +195,8 @@ static const struct {
      sizeof(((struct handler *) 0)->fmt_fn)},
     {"level", offsetof(struct handler, level),
      sizeof(((struct handler *) 0)->level)},
+    {"max_level", offsetof(struct handler, max_level),
+     sizeof(((struct handler *) 0)->max_level)},
     {"quiet", offsetof(struct handler, quiet),
      sizeof(((struct handler *) 0)->quiet)},
     {"date_fmt", offsetof(struct handler, date_fmt),
@@ -212,7 +220,7 @@ static void _log_set_attribute(const char *name, const char *member,
     }
 
     if (!safe) {
-        fprintf(DEFAULT_STRAEM,
+        fprintf(DEFAULT_STREAM,
                 "[Logger C] Security Alert: Invalid access to member '%s'\n",
                 member);
         return;
@@ -224,7 +232,7 @@ static void _log_set_attribute(const char *name, const char *member,
             return;
         }
     }
-    fprintf(DEFAULT_STRAEM, "[Logger C] Handler's name not found: %s\n", name);
+    fprintf(DEFAULT_STREAM, "[Logger C] Handler's name not found: %s\n", name);
 }
 
 // methods to set handler properties
@@ -258,6 +266,12 @@ void log_set_level(const char *name, size_t value)
 {
     printf("Setting level to %zu\n", value);
     _log_set_member(name, size_t, level, value);
+}
+
+void log_set_max_level(const char *name, size_t value)
+{
+    assert(value < LOG_LEVEL_MAX);
+    _log_set_member(name, size_t, max_level, value);
 }
 
 void log_set_quiet(const char *name, bool value)
