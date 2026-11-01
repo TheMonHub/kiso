@@ -115,7 +115,7 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
         uint32_t queue_family_count = device_information->queue_family_count;
         device_information->queue_family_properties = malloc(sizeof(VkQueueFamilyProperties) * queue_family_count);
         if (device_information->queue_family_properties == nullptr) {
-            for (uint64_t j = i; j > 0; j--) {
+            for (uint32_t j = 0; j < i; j++) {
                 free((*info)[j].queue_family_properties);
             }
             free(*info);
@@ -155,25 +155,25 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
             }
         }
         if (global_queue_family_info->graphics_bit) {
-            device_information->score += 100;
-        }
-        if (global_queue_family_info->compute_bit) {
-            device_information->score += 100;
-        }
-        if (global_queue_family_info->transfer_bit) {
-            device_information->score += 100;
-        }
-        if (global_queue_family_info->sparse_binding_bit) {
-            device_information->score += 100;
-        }
-        if (global_queue_family_info->protected_bit) {
             device_information->score += 50;
         }
+        if (global_queue_family_info->compute_bit) {
+            device_information->score += 50;
+        }
+        if (global_queue_family_info->transfer_bit) {
+            device_information->score += 50;
+        }
+        if (global_queue_family_info->sparse_binding_bit) {
+            device_information->score += 50;
+        }
+        if (global_queue_family_info->protected_bit) {
+            device_information->score += 25;
+        }
         if (global_queue_family_info->video_decode_bit) {
-            device_information->score += 100;
+            device_information->score += 50;
         }
         if (global_queue_family_info->video_encode_bit) {
-            device_information->score += 75;
+            device_information->score += 50;
         }
         if (global_queue_family_info->optical_flow_bit) {
             device_information->score += 5;
@@ -289,10 +289,13 @@ bool GetQueueFamilyIndexWithRequiredFlags(const uint32_t queue_family_count, con
 
 bool CheckVulkanPhysicalDeviceSwapchainExtensionSupport(const VkPhysicalDevice device) {
     uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+    VkResult vk_result = vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+    if (vk_result != VK_SUCCESS) {
+        return false;
+    }
 
     VkExtensionProperties available_extensions[extensionCount];
-    const VkResult vk_result = vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, available_extensions);
+    vk_result = vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, available_extensions);
     if (vk_result != VK_SUCCESS) {
         return false;
     }
