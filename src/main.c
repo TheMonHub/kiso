@@ -44,6 +44,16 @@ int main() {
     }
     glfwSetErrorCallback(GlfwErrorCallback);
 
+    log_info("Creating a window");
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    GLFWwindow* window = glfwCreateWindow(640, 480, "KISO", NULL, NULL);
+    if (window == nullptr)
+    {
+        glfwTerminate();
+        ExitOnError("Failed to create window", 1);
+    }
+
     log_trace("Fetching required Vulkan instance extensions from GLFW");
     uint32_t glfw_extensions_count;
     const char **glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extensions_count);
@@ -62,12 +72,22 @@ int main() {
     }
     instance_extensions[glfw_extensions_count] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
 
+    log_info("Initializing Vulkan");
     log_trace("Creating Vulkan Instance");
     VkInstance instance;
     VkResult vk_result = CreateVulkanInstance(&instance, instance_extensions, glfw_extensions_count + 1, VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR);
     if (vk_result != VK_SUCCESS) {
         glfwTerminate();
         ExitOnError("Failed to create Vulkan instance", vk_result);
+    }
+
+    log_trace("Creating window surface");
+    VkSurfaceKHR surface;
+    vk_result = glfwCreateWindowSurface(instance, window, NULL, &surface);
+    if (vk_result != VK_SUCCESS)
+    {
+        glfwTerminate();
+        ExitOnError("Failed to create window surface", vk_result);
     }
 
     log_trace("Getting Vulkan physical devices and its information");
@@ -157,29 +177,11 @@ int main() {
         ExitOnError(error_str, vk_result);
     }
 
-    log_info("Creating a window");
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    GLFWwindow* window = glfwCreateWindow(640, 480, "KISO", NULL, NULL);
-    if (window == nullptr)
-    {
-        vkDestroyDevice(device, nullptr);
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError("Failed to create window", vk_result);
-    }
-    VkSurfaceKHR surface;
-    vk_result = glfwCreateWindowSurface(instance, window, NULL, &surface);
-    if (vk_result != VK_SUCCESS)
-    {
-        vkDestroyDevice(device, nullptr);
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError("Failed to create window surface", vk_result);
-    }
+    VkSwapchainKHR swapchain;
+    
 
     while (!glfwWindowShouldClose(window)) {
-
+        glfwPollEvents();
     }
 
     log_info("Clearing resources");

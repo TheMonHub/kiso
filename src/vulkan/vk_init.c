@@ -292,7 +292,10 @@ bool CheckVulkanPhysicalDeviceSwapchainExtensionSupport(const VkPhysicalDevice d
     vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
     VkExtensionProperties available_extensions[extensionCount];
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, available_extensions);
+    const VkResult vk_result = vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, available_extensions);
+    if (vk_result != VK_SUCCESS) {
+        return false;
+    }
     for (uint32_t i = 0; i < extensionCount; i++) {
         const char * const swapchain_extension[] = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
