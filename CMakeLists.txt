@@ -25,7 +25,8 @@ set(CMAKE_C_CLANG_TIDY
         cert-*,
         modernize-use-nodiscard,
         -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
-        -clang-diagnostic-unknown-attributes
+        -clang-diagnostic-unknown-attributes,
+        -bugprone-easily-swappable-parameters
 "
 
         "--warnings-as-errors=*"
@@ -99,6 +100,8 @@ add_executable(kiso
         src/util/enum_to_str.h
         src/vulkan/vk_convert.c
         src/vulkan/vk_convert.h
+        src/util/math.c
+        src/util/math.h
 )
 
 if(VULKAN_HEADERS_ONLY)

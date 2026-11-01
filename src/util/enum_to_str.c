@@ -20,3 +20,18 @@ const char *VulkanDeviceTypeToStr(const VkPhysicalDeviceType value) {
             return "UNKNOWN";
     }
 }
+
+const char *VkPresentModeToStr(const VkPresentModeKHR value) {
+    switch (value) {
+        case VK_PRESENT_MODE_IMMEDIATE_KHR:
+            return "VK_PRESENT_MODE_IMMEDIATE_KHR";
+        case VK_PRESENT_MODE_MAILBOX_KHR:
+            return "VK_PRESENT_MODE_MAILBOX_KHR";
+        case VK_PRESENT_MODE_FIFO_KHR:
+            return "VK_PRESENT_MODE_FIFO_KHR";
+        case VK_PRESENT_MODE_FIFO_RELAXED_KHR:
+            return "VK_PRESENT_MODE_FIFO_RELAXED_KHR";
+        default:
+            return "UNKNOWN";
+    }
+}

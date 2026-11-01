@@ -13,6 +13,7 @@
 #include "logger.h"
 #include "vk_convert.h"
 #include "util/enum_to_str.h"
+#include "util/math.h"
 
 #define RETURN_ERROR(msg, code) \
     *error_message = msg; \
@@ -20,7 +21,7 @@
 
 static constexpr uint64_t kMaxDeviceSizeScore = 1280;
 
-VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, const uint32_t extensions_count, VkInstanceCreateFlags flags) {
+VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, const uint32_t extensions_count, const VkInstanceCreateFlags flags) {
     log_info(LINE_SEPARATOR);
     log_info(
         "Vulkan API version: %d.%d.%d.%d",
@@ -78,7 +79,7 @@ static int GetScoreBasedOnHeapFlags(const VkFlags flags) {
 // The caller of this function is responsible for freeing the memory allocated for the properties array.
 // Being the PhysicalDeviceInformation array, queue_family_properties array inside each PhysicalDeviceInformation entry all from the returned array.
 VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysicalDevice *physical_device, const uint32_t device_count,
-    PhysicalDeviceInformation **info, char** error_message) {
+    PhysicalDeviceInformation **info, const VkSurfaceKHR surface, char** error_message) {
     log_trace("Instructed to get Vulkan physical devices information");
 
     *info = calloc(device_count, sizeof(PhysicalDeviceInformation));
@@ -108,7 +109,10 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
             device_information->score += 50;
         }
 
-        device_information->swapchain_extension_supported = CheckVulkanPhysicalDeviceSwapchainExtensionSupport(physical_device[i]);
+        static const char * const swapchain_extensions[] = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        };
+        device_information->swapchain_extension_supported = CheckVulkanPhysicalDeviceExtensionSupport(physical_device[i], swapchain_extensions, 1);
         log_trace("Physical device %d swapchain extension: %d", i, device_information->swapchain_extension_supported ? 1 : 0);
 
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device[i], &device_information->queue_family_count, nullptr);
@@ -146,14 +150,18 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
                       queue_family_info[j].optical_flow_bit,
                       queue_family_info[j].data_graph_bit);
 
-            const bool surface_support = glfwGetPhysicalDevicePresentationSupport(instance, physical_device[i], j);
+            VkBool32 surface_support = false;
+            vkGetPhysicalDeviceSurfaceSupportKHR(physical_device[i], j, surface, &surface_support);
             log_trace("Physical device %d queue family %d surface support: %d", i, j, surface_support);
-            if (!device_information->queue_family_surface_support_present) {
+            if (!device_information->queue_family_surface_support_present && surface_support) {
                 device_information->queue_family_surface_support_index = j;
                 device_information->queue_family_surface_support_present = true;
                 log_trace("Physical device %d queue family %d is chosen for presentation", i, j);
             }
         }
+
+        ConvertQueueFlags(global_queue_family_info->queue_flags, &device_information->global_queue_family_info);
+
         if (global_queue_family_info->graphics_bit) {
             device_information->score += 50;
         }
@@ -287,26 +295,262 @@ bool GetQueueFamilyIndexWithRequiredFlags(const uint32_t queue_family_count, con
     return false;
 }
 
-bool CheckVulkanPhysicalDeviceSwapchainExtensionSupport(const VkPhysicalDevice device) {
-    uint32_t extensionCount;
-    VkResult vk_result = vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+bool CheckVulkanPhysicalDeviceExtensionSupport(const VkPhysicalDevice device, const char *const *extensions, const uint32_t extensions_count) {
+    uint32_t extension_count;
+    VkResult vk_result = vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr);
     if (vk_result != VK_SUCCESS) {
         return false;
     }
 
-    VkExtensionProperties available_extensions[extensionCount];
-    vk_result = vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, available_extensions);
+    VkExtensionProperties available_extensions[extension_count];
+    vk_result = vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, available_extensions);
     if (vk_result != VK_SUCCESS) {
         return false;
     }
-    for (uint32_t i = 0; i < extensionCount; i++) {
-        const char * const swapchain_extension[] = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
-        };
-        if (strcmp(available_extensions[i].extensionName, swapchain_extension[0]) == 0) {
-            return true;
+
+    uint32_t found_extensions_count = 0;
+
+    for (uint32_t i = 0; i < extensions_count; i++) {
+        for (uint32_t j = 0; j < extension_count; j++) {
+            if (strcmp(available_extensions[j].extensionName, extensions[i]) == 0) {
+                found_extensions_count++;
+                break;
+            }
         }
     }
 
+    if (found_extensions_count == extensions_count) {
+        return true;
+    }
+
     return false;
+}
+
+bool CheckVulkanInstanceExtensionSupport(const char *const *extensions, const uint32_t extensions_count) {
+    uint32_t extension_count;
+    VkResult vk_result = vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
+    if (vk_result != VK_SUCCESS) {
+        return false;
+    }
+
+    VkExtensionProperties available_extensions[extension_count];
+    vk_result = vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, available_extensions);
+    if (vk_result != VK_SUCCESS) {
+        return false;
+    }
+
+    uint32_t found_extensions_count = 0;
+
+    for (uint32_t i = 0; i < extensions_count; i++) {
+        for (uint32_t j = 0; j < extension_count; j++) {
+            if (strcmp(available_extensions[j].extensionName, extensions[i]) == 0) {
+                found_extensions_count++;
+                break;
+            }
+        }
+    }
+
+    if (found_extensions_count == extensions_count) {
+        return true;
+    }
+
+    return false;
+}
+
+// present_modes and formats are the caller's responsibility to free.
+VkResult GetSwapchainSupportDetails(const VkPhysicalDevice device, const VkSurfaceKHR surface, SwapchainSupportDetails *details, char** error_message) {
+    VkSurfaceCapabilitiesKHR capabilities;
+    VkResult vk_result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &capabilities);
+    if (vk_result != VK_SUCCESS) {
+        RETURN_ERROR("Failed to get swapchain surface capabilities", vk_result);
+    }
+
+    uint32_t format_count;
+    vk_result = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, nullptr);
+    if (vk_result != VK_SUCCESS) {
+        RETURN_ERROR("Failed to get swapchain surface formats", vk_result);
+    }
+    if (format_count == 0) {
+        RETURN_ERROR("No swapchain surface formats found", VK_ERROR_UNKNOWN);
+    }
+
+    VkSurfaceFormatKHR *formats = malloc(sizeof(VkSurfaceFormatKHR) * format_count);
+    if (formats == nullptr) {
+        RETURN_ERROR("Failed to allocate memory for swapchain surface formats", VK_ERROR_OUT_OF_HOST_MEMORY);
+    }
+    vk_result = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, formats);
+    if (vk_result != VK_SUCCESS) {
+        free(formats);
+        RETURN_ERROR("Failed to get swapchain surface formats", vk_result);
+    }
+
+    uint32_t present_mode_count;
+    vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &present_mode_count, nullptr);
+    if (vk_result != VK_SUCCESS) {
+        free(formats);
+        RETURN_ERROR("Failed to get swapchain present modes", vk_result);
+    }
+    if (present_mode_count == 0) {
+        free(formats);
+        RETURN_ERROR("No swapchain present modes found", VK_ERROR_UNKNOWN);
+    }
+
+    VkPresentModeKHR *present_modes = malloc(sizeof(VkPresentModeKHR) * present_mode_count);
+    if (present_modes == nullptr) {
+        free(formats);
+        RETURN_ERROR("Failed to allocate memory for swapchain present modes", VK_ERROR_OUT_OF_HOST_MEMORY);
+    }
+    vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &present_mode_count, present_modes);
+    if (vk_result != VK_SUCCESS) {
+        free(formats);
+        free(present_modes);
+        RETURN_ERROR("Failed to get swapchain present modes", vk_result);
+    }
+
+    details->formats = formats;
+    details->format_count = format_count;
+    details->present_modes = present_modes;
+    details->present_mode_count = present_mode_count;
+    details->capabilities = capabilities;
+
+    return VK_SUCCESS;
+}
+
+bool ChoosePreferredSurfaceFormat(const VkSurfaceFormatKHR* surface_formats, const uint32_t surface_format_count, const VkFormat preferred_format, const VkColorSpaceKHR preferred_color_space, VkSurfaceFormatKHR **surface_format) {
+    for (uint32_t i = 0; i < surface_format_count; i++) {
+        if (surface_formats[i].format == preferred_format && surface_formats[i].colorSpace == preferred_color_space) {
+            *surface_format = (VkSurfaceFormatKHR *) &surface_formats[i];
+            return true;
+        }
+    }
+    *surface_format = (VkSurfaceFormatKHR *) &surface_formats[0];
+    return false;
+}
+
+bool choosePreferredPresentMode(const VkPresentModeKHR* present_modes, const uint32_t present_mode_count, const VkPresentModeKHR preferred_present_mode, VkPresentModeKHR *present_mode) {
+    for (uint32_t i = 0; i < present_mode_count; i++) {
+        if (present_modes[i] == preferred_present_mode) {
+            *present_mode = present_modes[i];
+            return true;
+        }
+    }
+    *present_mode = present_modes[0];
+    return false;
+}
+
+VkExtent2D chooseVulkanExtent(const VkSurfaceCapabilitiesKHR *capabilities, GLFWwindow *window) {
+    if (capabilities->currentExtent.width != UINT32_MAX) {
+        return capabilities->currentExtent;
+    }
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+
+    return (VkExtent2D) {
+        .width = UnsignedClamp((uint32_t) width, capabilities->minImageExtent.width, capabilities->maxImageExtent.width),
+        .height = UnsignedClamp((uint32_t) height, capabilities->minImageExtent.height, capabilities->maxImageExtent.height),
+    };
+}
+
+// images are the caller's responsibility to free.
+VkResult CreateVulkanSwapchain(const CreateSwapchainInfo *info, VkSwapchainKHR *swapchain, VkImage **images, uint32_t *image_count, char** error_message) {
+    log_trace("Instructed to create a Vulkan swapchain");
+    log_trace("Using surface format: format=%08X, color_space=%08X", info->surface_format->format, info->surface_format->colorSpace);
+    log_trace("Using present mode: %s", VkPresentModeToStr(info->present_mode));
+
+    uint32_t image_request_count = info->swapchain_support->capabilities.minImageCount + 1;
+    if (info->swapchain_support->capabilities.maxImageCount > 0 && image_request_count > info->swapchain_support->capabilities.maxImageCount) {
+        image_request_count = info->swapchain_support->capabilities.maxImageCount;
+    }
+    log_trace("Using image count: %u", image_request_count);
+
+    VkSwapchainCreateInfoKHR create_info = {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = *info->surface,
+        .minImageCount = image_request_count,
+        .imageFormat = info->surface_format->format,
+        .imageColorSpace = info->surface_format->colorSpace,
+        .imageExtent = *info->extent,
+        .imageArrayLayers = 1,
+        .imageUsage = info->image_usage,
+        .preTransform = info->swapchain_support->capabilities.currentTransform,
+        .compositeAlpha = info->composite_alpha,
+        .presentMode = info->present_mode,
+        .clipped = VK_TRUE,
+        .oldSwapchain = VK_NULL_HANDLE
+    };
+
+    if (info->graphics_family_index != info->present_family_index) {
+        create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        create_info.queueFamilyIndexCount = 2;
+        create_info.pQueueFamilyIndices = (uint32_t[2]) {info->graphics_family_index, info->present_family_index};
+    } else {
+        create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        create_info.queueFamilyIndexCount = 0;
+        create_info.pQueueFamilyIndices = nullptr;
+    }
+
+    VkResult vk_result = vkCreateSwapchainKHR(info->device, &create_info, nullptr, swapchain);
+    if (vk_result != VK_SUCCESS) {
+        RETURN_ERROR("Failed to create Vulkan swapchain", vk_result);
+    }
+
+    vk_result = vkGetSwapchainImagesKHR(info->device, *swapchain, image_count, nullptr);
+    if (vk_result != VK_SUCCESS) {
+        RETURN_ERROR("Failed to get swapchain images", vk_result);
+    }
+
+    *images = (VkImage *) malloc(sizeof(VkImage) * *image_count);
+    if (images == nullptr) {
+        RETURN_ERROR("Failed to allocate memory for swapchain images", VK_ERROR_OUT_OF_HOST_MEMORY);
+    }
+
+    vk_result = vkGetSwapchainImagesKHR(info->device, *swapchain, image_count, *images);
+    if (vk_result != VK_SUCCESS) {
+        free((void *)*images);
+        RETURN_ERROR("Failed to get swapchain images", vk_result);
+    }
+    return VK_SUCCESS;
+}
+
+VkResult CreateImageViews(const VkDevice device, const VkImage *images, const uint32_t image_count, VkImageView *image_views, const VkFormat swapchain_img_format, char** error_message) {
+    for (uint32_t i = 0; i < image_count; ++i) {
+        const VkImageViewCreateInfo create_info = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .image = images[i],
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .format = swapchain_img_format,
+            .components = (VkComponentMapping) {
+                .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .a = VK_COMPONENT_SWIZZLE_IDENTITY
+            },
+            .subresourceRange = (VkImageSubresourceRange) {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            }
+        };
+
+        const VkResult vk_result = vkCreateImageView(device, &create_info, nullptr, &image_views[i]);
+        if (vk_result != VK_SUCCESS) {
+            RETURN_ERROR("Failed to create image views", vk_result);
+        }
+    }
+
+    return VK_SUCCESS;
+}
+
+void CleanupPhysicalDeviceInformation(PhysicalDeviceInformation *physical_device_information) {
+    free(physical_device_information->queue_family_properties);
+    free(physical_device_information);
+}
+
+void CleanupSwapchainSupportDetails(const SwapchainSupportDetails *swapchain_support_details) {
+    free(swapchain_support_details->formats);
+    free(swapchain_support_details->present_modes);
 }

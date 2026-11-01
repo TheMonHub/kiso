@@ -20,4 +20,6 @@ typedef struct QueueFamilyInfo {
 
 void ConvertQueueFamilyProperties(const VkQueueFamilyProperties *properties, uint32_t count, QueueFamilyInfo output[]) [[unsequenced]];
 
+void ConvertQueueFlags(const VkQueueFlags flags, QueueFamilyInfo *output) [[unsequenced]];
+
 #endif // VK_CONVERT_H

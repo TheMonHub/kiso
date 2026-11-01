@@ -4,5 +4,6 @@
 #include <vulkan/vulkan_core.h>
 
 const char *VulkanDeviceTypeToStr(VkPhysicalDeviceType value) [[unsequenced]];
+const char *VkPresentModeToStr(VkPresentModeKHR value) [[unsequenced]];
 
 #endif // ENUM_TO_STR_H
