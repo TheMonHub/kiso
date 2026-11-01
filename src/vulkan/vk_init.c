@@ -1,6 +1,7 @@
 #include "vk_init.h"
 
 #include <limits.h>
+#include <string.h>
 
 #include "GLFW/glfw3.h"
 #include "util/common_macro.h"
@@ -20,14 +21,14 @@
 static constexpr uint64_t kMaxDeviceSizeScore = 1280;
 
 VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, const uint32_t extensions_count, VkInstanceCreateFlags flags) {
-    log_trace(LINE_SEPARATOR);
-    log_trace(
+    log_info(LINE_SEPARATOR);
+    log_info(
         "Vulkan API version: %d.%d.%d.%d",
         VK_API_VERSION_VARIANT(CURRENT_VK_API_VERSION),
         VK_API_VERSION_MAJOR(CURRENT_VK_API_VERSION),
         VK_API_VERSION_MINOR(CURRENT_VK_API_VERSION),
         VK_API_VERSION_PATCH(CURRENT_VK_API_VERSION));
-    log_trace(LINE_SEPARATOR);
+    log_info(LINE_SEPARATOR);
 
     log_trace("Instructed to create a Vulkan instance with %d extensions:", extensions_count);
     for (uint32_t i = 0; i < extensions_count; i++) {
@@ -76,7 +77,7 @@ static int GetScoreBasedOnHeapFlags(const VkFlags flags) {
 
 // The caller of this function is responsible for freeing the memory allocated for the properties array.
 // Being the PhysicalDeviceInformation array, queue_family_properties array inside each PhysicalDeviceInformation entry all from the returned array.
-VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, VkPhysicalDevice *physical_device, uint32_t device_count,
+VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysicalDevice *physical_device, const uint32_t device_count,
     PhysicalDeviceInformation **info, char** error_message) {
     log_trace("Instructed to get Vulkan physical devices information");
 
@@ -107,6 +108,9 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, VkPhysicalDevic
             device_information->score += 500;
         }
 
+        device_information->swapchain_extension_supported = CheckVulkanPhysicalDeviceSwapchainExtensionSupport(physical_device[i]);
+        log_trace("Physical device %d swapchain extension: %d", i, device_information->swapchain_extension_supported ? 1 : 0);
+
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device[i], &device_information->queue_family_count, nullptr);
         uint32_t queue_family_count = device_information->queue_family_count;
         device_information->queue_family_properties = malloc(sizeof(VkQueueFamilyProperties) * queue_family_count);
@@ -125,50 +129,12 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, VkPhysicalDevic
         log_trace(LINE_SEPARATOR);
         log_trace("Physical device %d has %d queue families", i, device_information->queue_family_count);
         log_trace(LINE_SEPARATOR);
+        QueueFamilyInfo *global_queue_family_info = &device_information->global_queue_family_info;
         for (uint32_t j = 0; j < device_information->queue_family_count; j++) {
-            QueueFamilyInfo *global_queue_family_info = &device_information->global_queue_family_info;
-            uint64_t score = 0;
             global_queue_family_info->queue_flags = global_queue_family_info->queue_flags | queue_family_info[j].queue_flags;
-            if (queue_family_info[j].graphics_bit) {
-                global_queue_family_info->graphics_bit = true;
-                score += 100;
-            }
-            if (queue_family_info[j].compute_bit) {
-                global_queue_family_info->compute_bit = true;
-                score += 100;
-            }
-            if (queue_family_info[j].transfer_bit) {
-                global_queue_family_info->transfer_bit = true;
-                score += 100;
-            }
-            if (queue_family_info[j].sparse_binding_bit) {
-                global_queue_family_info->sparse_binding_bit = true;
-                score += 100;
-            }
-            if (queue_family_info[j].protected_bit) {
-                global_queue_family_info->protected_bit = true;
-                score += 50;
-            }
-            if (queue_family_info[j].video_decode_bit) {
-                global_queue_family_info->video_decode_bit = true;
-                score += 100;
-            }
-            if (queue_family_info[j].video_encode_bit) {
-                global_queue_family_info->video_encode_bit = true;
-                score += 75;
-            }
-            if (queue_family_info[j].optical_flow_bit) {
-                global_queue_family_info->optical_flow_bit = true;
-                score += 5;
-            }
-            if (queue_family_info[j].data_graph_bit) {
-                global_queue_family_info->data_graph_bit = true;
-                score += 5;
-            }
-            device_information->score += score;
 
             log_trace("Physical device %d queue family %d: graphics=%d, compute=%d, transfer=%d, sparse_binding=%d,"
-                      " protected=%d, video_decode=%d, video_encode=%d, optical_flow=%d, data_graph=%d, score=%llu",
+                      " protected=%d, video_decode=%d, video_encode=%d, optical_flow=%d, data_graph=%d",
                       i, j,
                       queue_family_info[j].graphics_bit,
                       queue_family_info[j].compute_bit,
@@ -178,8 +144,42 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, VkPhysicalDevic
                       queue_family_info[j].video_decode_bit,
                       queue_family_info[j].video_encode_bit,
                       queue_family_info[j].optical_flow_bit,
-                      queue_family_info[j].data_graph_bit,
-                      score);
+                      queue_family_info[j].data_graph_bit);
+
+            const bool surface_support = glfwGetPhysicalDevicePresentationSupport(instance, physical_device[i], j);
+            log_trace("Physical device %d queue family %d surface support: %d", i, j, surface_support);
+            if (!device_information->queue_family_surface_support_present) {
+                device_information->queue_family_surface_support_index = j;
+                device_information->queue_family_surface_support_present = true;
+                log_trace("Physical device %d queue family %d is chosen for presentation", i, j);
+            }
+        }
+        if (global_queue_family_info->graphics_bit) {
+            device_information->score += 100;
+        }
+        if (global_queue_family_info->compute_bit) {
+            device_information->score += 100;
+        }
+        if (global_queue_family_info->transfer_bit) {
+            device_information->score += 100;
+        }
+        if (global_queue_family_info->sparse_binding_bit) {
+            device_information->score += 100;
+        }
+        if (global_queue_family_info->protected_bit) {
+            device_information->score += 50;
+        }
+        if (global_queue_family_info->video_decode_bit) {
+            device_information->score += 100;
+        }
+        if (global_queue_family_info->video_encode_bit) {
+            device_information->score += 75;
+        }
+        if (global_queue_family_info->optical_flow_bit) {
+            device_information->score += 5;
+        }
+        if (global_queue_family_info->data_graph_bit) {
+            device_information->score += 5;
         }
 
         log_trace(LINE_SEPARATOR);
@@ -211,29 +211,32 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, VkPhysicalDevic
     return VK_SUCCESS;
 }
 
-VkResult CreateVulkanDevice(const VkPhysicalDevice physical_device, VkDevice* vk_device, const uint32_t queue_family_index, const char * const extensions[], const uint32_t extension_count, char** error_message) {
+VkResult CreateVulkanDevice(const VkPhysicalDevice physical_device, VkDevice* vk_device, const uint32_t queue_family_index[], const uint32_t queue_family_count, const char * const extensions[], const uint32_t extension_count, char** error_message) {
     log_trace("Instructed to create a Vulkan device with %d extensions:", extension_count);
     for (uint32_t i = 0; i < extension_count; i++) {
         log_trace("Vulkan device extension: %s", extensions[i]);
     }
-    log_trace("Vulkan device queue family index: %d", queue_family_index);
 
-    float queue_priorities[] = { 1.0f };
-    VkDeviceQueueCreateInfo queue_info = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = 0,
-        .queueFamilyIndex = queue_family_index,
-        .queueCount = 1,
-        .pQueuePriorities = &queue_priorities[0]
-    };
+    VkDeviceQueueCreateInfo queue_infos[queue_family_count];
+    constexpr float queue_priorities[] = { 1.0f };
+    for (uint32_t i = 0; i < queue_family_count; i++) {
+        log_trace("Vulkan device queue family index: %u", queue_family_index[i]);
+        queue_infos[i] = (VkDeviceQueueCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .queueFamilyIndex = queue_family_index[i],
+            .queueCount = 1,
+            .pQueuePriorities = &queue_priorities[0]
+        };
+    }
 
     const VkDeviceCreateInfo device_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queue_info,
+        .queueCreateInfoCount = queue_family_count,
+        .pQueueCreateInfos = queue_infos,
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = nullptr,
         .enabledExtensionCount = extension_count,
@@ -249,11 +252,18 @@ VkResult CreateVulkanDevice(const VkPhysicalDevice physical_device, VkDevice* vk
     return VK_SUCCESS;
 }
 
-bool GetBestPhysicalDevice(const PhysicalDeviceInformation *properties, const uint32_t device_count, uint32_t *best_device, const VkQueueFlags required_flags) {
+bool GetBestPhysicalDeviceWithSwapchainAndPresentationSupport(const PhysicalDeviceInformation *properties, const uint32_t device_count, uint32_t *best_device, const VkQueueFlags required_flags) {
     bool found_candidate = false;
     uint32_t device_candidate = 0;
     uint64_t current_best_score = 0;
     for (uint32_t i = 0; i < device_count; i++) {
+        if (!properties[i].swapchain_extension_supported) {
+            continue;
+        }
+        if (!properties[i].queue_family_surface_support_present) {
+            continue;
+        }
+
         if ((properties[i].global_queue_family_info.queue_flags & required_flags) == required_flags) {
             if (current_best_score < properties[i].score) {
                 current_best_score = properties[i].score;
@@ -267,10 +277,27 @@ bool GetBestPhysicalDevice(const PhysicalDeviceInformation *properties, const ui
     return found_candidate;
 }
 
-bool GetQueueFamilyIndexWithRequiredFlags(const uint32_t queue_family_count, const VkQueueFamilyProperties *queue_family_info, const VkQueueFlags required_flags, uint32_t *queue_family_index) {
+bool GetQueueFamilyIndexWithRequiredFlags(const uint32_t queue_family_count, const VkQueueFamilyProperties *queue_family_info, const VkQueueFlags required_flags,uint32_t *queue_family_index) {
     for (uint32_t i = 0; i < queue_family_count; i++) {
-        if ((queue_family_info->queueFlags & required_flags) == required_flags) {
+        if ((queue_family_info[i].queueFlags & required_flags) == required_flags) {
             *queue_family_index = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool CheckVulkanPhysicalDeviceSwapchainExtensionSupport(const VkPhysicalDevice device) {
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+    VkExtensionProperties available_extensions[extensionCount];
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, available_extensions);
+    for (uint32_t i = 0; i < extensionCount; i++) {
+        const char * const swapchain_extension[] = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        };
+        if (strcmp(available_extensions[i].extensionName, swapchain_extension[0]) == 0) {
             return true;
         }
     }
