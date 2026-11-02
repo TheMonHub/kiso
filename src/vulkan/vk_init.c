@@ -3,11 +3,10 @@
 #include <limits.h>
 #include <string.h>
 
+#include <vulkan/vulkan.h>
 #include "GLFW/glfw3.h"
 #include "util/common_macro.h"
 #include "version.h"
-
-#include <vulkan/vulkan.h>
 
 #include "error.h"
 #include "logger.h"

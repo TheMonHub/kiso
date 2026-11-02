@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 #include "error.h"
 #include "logger.h"
@@ -11,9 +10,6 @@
 #include "vulkan/vk_cleanup.h"
 #include "vulkan/vk_init.h"
 #include "vulkan/vk_shader.h"
-
-// For some reason the compiler can't see glfwCreateWindowSurface unless I declare it here.
-GLFWAPI VkResult glfwCreateWindowSurface(VkInstance instance, GLFWwindow* window, const VkAllocationCallbacks* allocator, VkSurfaceKHR* surface);
 
 static void PrintProjectInfo() {
     log_info("========== KISO ===========");

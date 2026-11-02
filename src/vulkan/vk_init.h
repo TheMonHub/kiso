@@ -1,7 +1,7 @@
 #ifndef VK_INIT_H
 #define VK_INIT_H
 
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.h>
 
 #include "vk_convert.h"
 #include "GLFW/glfw3.h"
