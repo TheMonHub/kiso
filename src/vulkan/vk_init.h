@@ -75,8 +75,8 @@ VkResult CreateVulkanSwapchain(const CreateSwapchainInfo *info, VkSwapchainKHR *
 
 VkResult CreateImageViews(VkDevice device, const VkImage *images, uint32_t image_count, VkImageView *image_views, VkFormat swapchain_img_format, char** error_message);
 
-void CleanupPhysicalDeviceInformation(PhysicalDeviceInformation *physical_device_information);
-
-void CleanupSwapchainSupportDetails(const SwapchainSupportDetails *swapchain_support_details);
+VkResult CreateGraphicsPipeline(VkDevice device, VkShaderModule vertex_shader_module, VkShaderModule fragment_shader_module,
+    const VkPipelineVertexInputStateCreateInfo *vertex_input_info, const VkExtent2D *extent, VkPipelineLayout *pipeline_layout, VkRenderPass *render_pass,
+    VkPipeline *pipeline, VkFormat image_format, char **error_message);
 
 #endif // VK_INIT_H

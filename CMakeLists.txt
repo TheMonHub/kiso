@@ -26,7 +26,8 @@ set(CMAKE_C_CLANG_TIDY
         modernize-use-nodiscard,
         -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
         -clang-diagnostic-unknown-attributes,
-        -bugprone-easily-swappable-parameters
+        -bugprone-easily-swappable-parameters,
+        -bugprone-signed-bitwise
 "
 
         "--warnings-as-errors=*"
@@ -86,8 +87,6 @@ set_target_properties(logger-c PROPERTIES
 
 target_include_directories(logger-c PUBLIC logger)
 
-# --------------------------------------------------
-
 add_executable(kiso
         src/main.c
         src/vulkan/vk_init.c
@@ -102,6 +101,10 @@ add_executable(kiso
         src/vulkan/vk_convert.h
         src/util/math.c
         src/util/math.h
+        src/vulkan/vk_shader.c
+        src/vulkan/vk_shader.h
+        src/vulkan/vk_cleanup.c
+        src/vulkan/vk_cleanup.h
 )
 
 if(VULKAN_HEADERS_ONLY)
@@ -130,7 +133,6 @@ target_include_directories(kiso PRIVATE
 target_compile_options(kiso PRIVATE
         "-fmacro-prefix-map=${CMAKE_SOURCE_DIR}/="
         "-fmacro-prefix-map=${CMAKE_SOURCE_DIR}/src/="
-        "-Wno-unknown-attributes"
 )
 
 target_compile_definitions(kiso PRIVATE
@@ -158,3 +160,43 @@ if(GIT_BRANCH)
 else()
     message(WARNING "Could not get git branch")
 endif()
+
+# --------------------------------------------------
+# Compile Shaders
+# --------------------------------------------------
+
+file(GLOB_RECURSE GLSL_SOURCE_FILES
+        "shader/*.frag"
+        "shader/*.vert"
+)
+
+foreach(GLSL ${GLSL_SOURCE_FILES})
+    get_filename_component(FILE_NAME ${GLSL} NAME)
+    set(SPIRV "${PROJECT_BINARY_DIR}/shader/${FILE_NAME}.spv")
+    add_custom_command(
+            OUTPUT ${SPIRV}
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shader/"
+            COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V ${GLSL} -o ${SPIRV}
+            DEPENDS ${GLSL})
+    list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+endforeach(GLSL)
+
+add_custom_target(
+        Shaders
+        DEPENDS ${SPIRV_BINARY_FILES}
+)
+
+add_dependencies(kiso Shaders)
+
+add_custom_command(TARGET kiso POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:kiso>/shader/"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${PROJECT_BINARY_DIR}/shader"
+        "$<TARGET_FILE_DIR:kiso>/shader"
+)
+
+target_compile_options(kiso PRIVATE
+        --embed-dir=${PROJECT_BINARY_DIR}/shader
+)
+
+# --------------------------------------------------

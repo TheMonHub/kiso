@@ -12,6 +12,7 @@
 #include "error.h"
 #include "logger.h"
 #include "vk_convert.h"
+#include "vk_shader.h"
 #include "util/enum_to_str.h"
 #include "util/math.h"
 
@@ -47,22 +48,38 @@ VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, con
         .apiVersion = CURRENT_VK_API_VERSION
       };
 
+#if !defined(NDEBUG)
+    const char *actual_extensions[extensions_count + 1];
+    memcpy((void*)actual_extensions, (const void*)extensions, extensions_count * sizeof(char*));
+    actual_extensions[extensions_count] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
+
+    log_info("Enabling Vulkan validation layers");
+    static const char *validation_layers[] = {
+        "VK_LAYER_KHRONOS_validation"
+    };
+#endif
     const VkInstanceCreateInfo instance_create_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = nullptr,
         .flags = flags,
         .pApplicationInfo = &application_info,
+#if !defined(NDEBUG)
+        .enabledLayerCount = ARRAY_SIZE(validation_layers),
+        .ppEnabledLayerNames = validation_layers,
+        .enabledExtensionCount = extensions_count + 1,
+        .ppEnabledExtensionNames = actual_extensions
+#else
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = nullptr,
         .enabledExtensionCount = extensions_count,
         .ppEnabledExtensionNames = extensions
+#endif
       };
 
     return vkCreateInstance(&instance_create_info, nullptr, instance);
 }
 
 static int GetScoreBasedOnHeapFlags(const VkFlags flags) {
-    // NOLINTBEGIN(bugprone-signed-bitwise)
     if (flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
         return 10;
     }
@@ -73,7 +90,6 @@ static int GetScoreBasedOnHeapFlags(const VkFlags flags) {
         return 8;
     }
     return 0;
-    // NOLINTEND(bugprone-signed-bitwise)
 }
 
 // The caller of this function is responsible for freeing the memory allocated for the properties array.
@@ -93,13 +109,13 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
         vkGetPhysicalDeviceProperties(physical_device[i], &device_information->properties);
         VkPhysicalDeviceProperties *device_properties = &device_information->properties;
 
-        log_trace(LINE_SEPARATOR);
-        log_trace("Physical device %d", i, device_information->queue_family_count);
-        log_trace(LINE_SEPARATOR);
-        log_trace("Physical device %d name: %s", i, device_properties->deviceName);
-        log_trace("Physical device %d type: %s", i, VulkanDeviceTypeToStr(device_properties->deviceType));
-        log_trace("Physical device %d driver version: %u", i, device_properties->driverVersion);
-        log_trace("Physical device %d API version: %d.%d.%d",
+        log_debug(LINE_SEPARATOR);
+        log_debug("Physical device %d", i, device_information->queue_family_count);
+        log_debug(LINE_SEPARATOR);
+        log_debug("Physical device %d name: %s", i, device_properties->deviceName);
+        log_debug("Physical device %d type: %s", i, VulkanDeviceTypeToStr(device_properties->deviceType));
+        log_debug("Physical device %d driver version: %u", i, device_properties->driverVersion);
+        log_debug("Physical device %d API version: %d.%d.%d",
             i,
             VK_VERSION_MAJOR(device_properties->apiVersion),
             VK_VERSION_MINOR(device_properties->apiVersion),
@@ -113,7 +129,7 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
         device_information->swapchain_extension_supported = CheckVulkanPhysicalDeviceExtensionSupport(physical_device[i], swapchain_extensions, 1);
-        log_trace("Physical device %d swapchain extension: %d", i, device_information->swapchain_extension_supported ? 1 : 0);
+        log_debug("Physical device %d swapchain extension: %d", i, device_information->swapchain_extension_supported ? 1 : 0);
 
         vkGetPhysicalDeviceQueueFamilyProperties(physical_device[i], &device_information->queue_family_count, nullptr);
         uint32_t queue_family_count = device_information->queue_family_count;
@@ -130,7 +146,7 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
         QueueFamilyInfo queue_family_info[queue_family_count];
         ConvertQueueFamilyProperties(device_information->queue_family_properties, queue_family_count, queue_family_info);
 
-        log_trace(LINE_SEPARATOR);
+        log_debug(LINE_SEPARATOR);
         log_trace("Physical device %d has %d queue families", i, device_information->queue_family_count);
         log_trace(LINE_SEPARATOR);
         QueueFamilyInfo *global_queue_family_info = &device_information->global_queue_family_info;
@@ -211,9 +227,9 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
             log_trace("Physical device %d memory heap %d score: %llu", i, j, size_score);
         }
 
-        log_trace(LINE_SEPARATOR);
-        log_trace("Physical device %d score: %llu", i, device_information->score);
-        log_trace(LINE_SEPARATOR);
+        log_debug(LINE_SEPARATOR);
+        log_debug("Physical device %d score: %llu", i, device_information->score);
+        log_debug(LINE_SEPARATOR);
     }
 
     return VK_SUCCESS;
@@ -265,6 +281,9 @@ bool GetBestPhysicalDeviceWithSwapchainAndPresentationSupport(const PhysicalDevi
     uint32_t device_candidate = 0;
     uint64_t current_best_score = 0;
     for (uint32_t i = 0; i < device_count; i++) {
+        if (properties[i].properties.apiVersion < CURRENT_VK_API_VERSION) {
+            continue;
+        }
         if (!properties[i].swapchain_extension_supported) {
             continue;
         }
@@ -545,12 +564,220 @@ VkResult CreateImageViews(const VkDevice device, const VkImage *images, const ui
     return VK_SUCCESS;
 }
 
-void CleanupPhysicalDeviceInformation(PhysicalDeviceInformation *physical_device_information) {
-    free(physical_device_information->queue_family_properties);
-    free(physical_device_information);
-}
+VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vertex_shader_module, const VkShaderModule fragment_shader_module,
+    const VkPipelineVertexInputStateCreateInfo *vertex_input_info, const VkExtent2D *extent, VkPipelineLayout *pipeline_layout, VkRenderPass *render_pass,
+    VkPipeline *pipeline, VkFormat image_format, char **error_message) {
+    log_trace("Instructed to create a Vulkan graphics pipeline");
+    const VkPipelineShaderStageCreateInfo vertShaderStageInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+        .module = vertex_shader_module,
+        .pName = "main"
+    };
+    const VkPipelineShaderStageCreateInfo fragShaderStageInfo = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .module = fragment_shader_module,
+        .pName = "main"
+    };
 
-void CleanupSwapchainSupportDetails(const SwapchainSupportDetails *swapchain_support_details) {
-    free(swapchain_support_details->formats);
-    free(swapchain_support_details->present_modes);
+    VkPipelineShaderStageCreateInfo shader_stages[] = {vertShaderStageInfo, fragShaderStageInfo};
+
+    VkDynamicState dynamicStates[] = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR
+    };
+
+    VkPipelineDynamicStateCreateInfo dynamic_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .dynamicStateCount = ARRAY_SIZE(dynamicStates),
+        .pDynamicStates = dynamicStates
+    };
+
+    VkPipelineInputAssemblyStateCreateInfo input_assembly = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .primitiveRestartEnable = VK_FALSE
+    };
+
+    VkViewport viewport = {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = (float)extent->width,
+        .height = (float)extent->height,
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
+
+    VkRect2D scissor = {
+        .offset = {.x = 0, .y = 0},
+        .extent = *extent
+    };
+
+    VkPipelineViewportStateCreateInfo viewport_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .viewportCount = 1,
+        .pViewports = &viewport,
+        .scissorCount = 1,
+        .pScissors = &scissor
+    };
+
+    VkPipelineRasterizationStateCreateInfo rasterizer = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .depthClampEnable = VK_FALSE,
+        .rasterizerDiscardEnable = VK_FALSE,
+        .polygonMode = VK_POLYGON_MODE_FILL,
+        .cullMode = VK_CULL_MODE_BACK_BIT,
+        .frontFace = VK_FRONT_FACE_CLOCKWISE,
+        .depthBiasEnable = VK_FALSE,
+        .depthBiasConstantFactor = 0.0f,
+        .depthBiasClamp = 0.0f,
+        .depthBiasSlopeFactor = 0.0f,
+        .lineWidth = 1.0f
+    };
+
+    VkPipelineMultisampleStateCreateInfo multisampling = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+        .sampleShadingEnable = VK_FALSE,
+        .minSampleShading = 1.0f,
+        .pSampleMask = nullptr,
+        .alphaToCoverageEnable = VK_FALSE,
+        .alphaToOneEnable = VK_FALSE
+    };
+
+    // VkPipelineDepthStencilStateCreateInfo depth_stencil
+
+    VkPipelineColorBlendAttachmentState color_blend_attachment = {
+        .blendEnable = VK_FALSE,
+        .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
+        .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .colorBlendOp = VK_BLEND_OP_ADD,
+        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .alphaBlendOp = VK_BLEND_OP_ADD,
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT
+    };
+
+    VkPipelineColorBlendStateCreateInfo color_blend_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .logicOpEnable = VK_FALSE,
+        .logicOp = VK_LOGIC_OP_COPY,
+        .attachmentCount = 1,
+        .pAttachments = &color_blend_attachment,
+        .blendConstants = { 0.0f, 0.0f, 0.0f, 0.0f }
+    };
+
+    VkPipelineLayoutCreateInfo pipeline_layout_create_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .setLayoutCount = 0,
+        .pSetLayouts = nullptr,
+        .pushConstantRangeCount = 0,
+        .pPushConstantRanges = nullptr
+    };
+
+    log_trace("Creating pipeline layout");
+    VkResult vk_result = vkCreatePipelineLayout(device, &pipeline_layout_create_info, nullptr, pipeline_layout);
+    if (vk_result != VK_SUCCESS) {
+        RETURN_ERROR("Failed to create pipeline layout", vk_result);
+    }
+
+    VkAttachmentDescription color_attachment = {
+        .flags = 0,
+        .format = image_format,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+    };
+
+    VkAttachmentReference color_attachment_ref = {
+        .attachment = 0,
+        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    };
+
+    VkSubpassDescription subpass = {
+        .flags = 0,
+        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+        .inputAttachmentCount = 0,
+        .pInputAttachments = nullptr,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &color_attachment_ref,
+        .pResolveAttachments = nullptr,
+        .pDepthStencilAttachment = nullptr,
+        .preserveAttachmentCount = 0,
+        .pPreserveAttachments = nullptr
+    };
+
+    VkRenderPassCreateInfo render_pass_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .attachmentCount = 1,
+        .pAttachments = &color_attachment,
+        .subpassCount = 1,
+        .pSubpasses = &subpass,
+        .dependencyCount = 0,
+        .pDependencies = nullptr
+    };
+
+    log_trace("Creating render pass");
+    vk_result = vkCreateRenderPass(device, &render_pass_info, nullptr, render_pass);
+    if (vk_result != VK_SUCCESS) {
+        vkDestroyPipelineLayout(device, *pipeline_layout, nullptr);
+        RETURN_ERROR("Failed to create render pass", vk_result);
+    }
+
+    VkGraphicsPipelineCreateInfo pipeline_info = {
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .stageCount = ARRAY_SIZE(shader_stages),
+        .pStages = shader_stages,
+        .pVertexInputState = vertex_input_info,
+        .pInputAssemblyState = &input_assembly,
+        .pTessellationState = nullptr,
+        .pViewportState = &viewport_state,
+        .pRasterizationState = &rasterizer,
+        .pMultisampleState = &multisampling,
+        .pDepthStencilState = nullptr,
+        .pColorBlendState = &color_blend_state,
+        .pDynamicState = &dynamic_state,
+        .layout = *pipeline_layout,
+        .renderPass = *render_pass,
+        .subpass = 0,
+        .basePipelineHandle = VK_NULL_HANDLE,
+        .basePipelineIndex = -1
+    };
+
+    log_trace("Creating graphics pipeline");
+    vk_result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, pipeline);
+    if (vk_result != VK_SUCCESS) {
+        vkDestroyPipelineLayout(device, *pipeline_layout, nullptr);
+        vkDestroyRenderPass(device, *render_pass, nullptr);
+        RETURN_ERROR("Failed to create graphics pipeline", vk_result);
+    }
+
+    return VK_SUCCESS;
 }

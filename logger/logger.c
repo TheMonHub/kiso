@@ -165,7 +165,7 @@ void _log_message(int level, const char *file, int line, const char *msg_fmt,
     };
 
     handler_t *rh = &L.handlers[ROOT_HANDLER];
-    if (!rh->quiet && (size_t)level >= rh->level) {
+    if (!rh->quiet && (size_t)level >= rh->level && (size_t)level <= rh->max_level) {
         update_record(&rec, rh);
         va_start(rec.ap, msg_fmt);
         rh->dump_fn(&rec);
