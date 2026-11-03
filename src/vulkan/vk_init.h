@@ -73,10 +73,24 @@ VkExtent2D chooseVulkanExtent(const VkSurfaceCapabilitiesKHR *capabilities, GLFW
 [[nodiscard]]
 VkResult CreateVulkanSwapchain(const CreateSwapchainInfo *info, VkSwapchainKHR *swapchain, VkImage **images, uint32_t *image_count, char** error_message);
 
+[[nodiscard]]
 VkResult CreateImageViews(VkDevice device, const VkImage *images, uint32_t image_count, VkImageView *image_views, VkFormat swapchain_img_format, char** error_message);
 
+[[nodiscard]]
 VkResult CreateGraphicsPipeline(VkDevice device, VkShaderModule vertex_shader_module, VkShaderModule fragment_shader_module,
     const VkPipelineVertexInputStateCreateInfo *vertex_input_info, const VkExtent2D *extent, VkPipelineLayout *pipeline_layout, VkRenderPass *render_pass,
     VkPipeline *pipeline, VkFormat image_format, char **error_message);
+
+[[nodiscard]]
+VkResult CreateFramebuffers(VkDevice device, const VkImageView *image_views, uint32_t image_count, VkRenderPass render_pass, VkFramebuffer *framebuffers, const VkExtent2D *extent, char **error_message);
+
+[[nodiscard]]
+VkResult CreateCommandPool(VkDevice device, uint32_t queue_family_index, VkCommandPool *command_pool, char **error_message);
+
+[[nodiscard]]
+VkResult CreateCommandBuffers(VkDevice device, VkCommandPool command_pool, uint32_t command_buffer_count, VkCommandBuffer *command_buffers, char **error_message);
+
+[[nodiscard]]
+VkResult CreateSyncObjects(const VkDevice *device, VkFence *in_flight_fence, VkSemaphore *image_available_semaphore, VkSemaphore **render_finished_semaphores, uint32_t image_count, char **error_message);
 
 #endif // VK_INIT_H

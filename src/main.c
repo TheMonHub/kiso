@@ -10,6 +10,7 @@
 #include "vulkan/vk_cleanup.h"
 #include "vulkan/vk_init.h"
 #include "vulkan/vk_shader.h"
+#include "vulkan/vk_render.h"
 
 static void PrintProjectInfo() {
     log_info("========== KISO ===========");
@@ -30,7 +31,6 @@ static void PrintProjectInfo() {
     log_info(LINE_SEPARATOR);
 }
 
-// TODO: Refactor cleanup using goto.
 int main(const int argc, char *argv[]) {
 #if defined(NDEBUG)
     log_set_level(DEFAULT, LOG_INFO);
@@ -43,6 +43,8 @@ int main(const int argc, char *argv[]) {
     }
 #endif
 
+    int _current_error_status = 0;
+
     log_set_max_level(DEFAULT, LOG_INFO);
     log_add_stream_handler(stderr, LOG_WARN, LOG_LEVEL_MAX, "stderr");
 
@@ -50,28 +52,51 @@ int main(const int argc, char *argv[]) {
 
     log_info("Initializing Application");
 
-    log_debug("Initializing GLFW");
+    log_trace("Initializing GLFW");
     if (!glfwInit()) {
         ExitOnError("Failed to initialize GLFW", 1);
     }
     glfwSetErrorCallback(GlfwErrorCallback);
 
+    constexpr int desired_window_width = 640;
+    constexpr int desired_window_height = 480;
+
     log_info("Creating a window");
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-    GLFWwindow* window = glfwCreateWindow(640, 480, "KISO", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(desired_window_width, desired_window_height, "KISO", NULL, NULL);
     if (window == nullptr)
     {
-        glfwTerminate();
-        ExitOnError("Failed to create window", 1);
+        PrintAndGotoIfError("Failed to create window", 1, glfw_cleanup);
+    }
+
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+
+    log_debug("Desired window size: %d x %d", desired_window_width, desired_window_height);
+    log_debug("Initial window size: %d x %d", width, height);
+
+    if (width != desired_window_width || height != desired_window_height) {
+        log_warn("Window size does not match desired size. Desired size: %d x %d Actual size: %d x %d", desired_window_width, desired_window_height, width, height);
+        log_warn("Resizing window to desired size");
+
+        log_debug("Resizing window since it does not match the desired size initially");
+        glfwSetWindowSize(window, 640, 480);
+        log_debug("Window size resized to: %d x %d", desired_window_width, desired_window_height);
+
+        glfwGetWindowSize(window, &width, &height);
+        log_debug("Actual window size after resize: %d x %d", width, height);
+
+        if (width != desired_window_width || height != desired_window_height) {
+            log_error("Window size does not match desired size after resize. Desired size: %d x %d Actual size: %d x %d", desired_window_width, desired_window_height, width, height);
+        }
     }
 
     log_trace("Fetching required Vulkan instance extensions from GLFW");
     uint32_t glfw_extensions_count;
     const char **glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extensions_count);
     if (!glfw_extensions) {
-        glfwTerminate();
-        ExitOnError("Failed to get required Vulkan instance extensions", 1);
+        PrintAndGotoIfError("Failed to get required Vulkan instance extensions", 1, glfw_cleanup);
     }
     log_debug("Required Vulkan instance extensions count: %u", glfw_extensions_count);
     for (uint32_t i = 0; i < glfw_extensions_count; ++i) {
@@ -83,8 +108,8 @@ int main(const int argc, char *argv[]) {
     VkInstance instance;
     VkResult vk_result = CreateVulkanInstance(&instance, glfw_extensions, glfw_extensions_count, 0);
     if (vk_result != VK_SUCCESS) {
-        glfwTerminate();
-        ExitOnError("Failed to create Vulkan instance", vk_result);
+
+        PrintAndGotoIfError("Failed to create Vulkan instance", vk_result, glfw_cleanup);
     }
 
     log_trace("Creating window surface");
@@ -92,36 +117,30 @@ int main(const int argc, char *argv[]) {
     vk_result = glfwCreateWindowSurface(instance, window, NULL, &surface);
     if (vk_result != VK_SUCCESS)
     {
-        glfwTerminate();
-        ExitOnError("Failed to create window surface", vk_result);
+        PrintAndGotoIfError("Failed to create window surface", vk_result, vkinstance_cleanup);
     }
 
-    log_debug("Getting Vulkan physical devices and its information");
+    log_trace("Getting Vulkan physical devices and its information");
     uint32_t physical_device_count;
 
     vk_result = vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr);
     if (vk_result != VK_SUCCESS) {
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError("Failed to get Vulkan physical devices count", vk_result);
+        PrintAndGotoIfError("Failed to get Vulkan physical devices count", vk_result, vksurface_cleanup);
     }
     if (physical_device_count == 0) {
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError("No Vulkan physical devices found", 1);
+        PrintAndGotoIfError("No Vulkan physical devices found", 1, vksurface_cleanup);
     }
 
-    VkPhysicalDevice physical_devices[physical_device_count];
+    auto physical_devices = (VkPhysicalDevice *) malloc(sizeof(VkPhysicalDevice) * physical_device_count);
+    if (!physical_devices) {
+        PrintAndGotoIfError("Failed to allocate memory for Vulkan physical devices", 1, vksurface_cleanup);
+    }
     vk_result = vkEnumeratePhysicalDevices(instance, &physical_device_count, physical_devices);
     if (vk_result != VK_SUCCESS) {
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError("Failed to get Vulkan physical devices", vk_result);
+        PrintAndGotoIfError("Failed to get Vulkan physical devices", vk_result, physicaldevicesmalloc_cleanup);
     }
     if (physical_device_count == 0) {
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError("No Vulkan physical devices found", 1);
+        PrintAndGotoIfError("No Vulkan physical devices found", 1, physicaldevicesmalloc_cleanup);
     }
     log_debug("Found %u Vulkan physical devices", physical_device_count);
 
@@ -129,19 +148,14 @@ int main(const int argc, char *argv[]) {
     char *error_str;
     vk_result = GetVulkanPhysicalDevicesInfo(instance, physical_devices, physical_device_count, &physical_device_info, surface, &error_str);
     if (vk_result != VK_SUCCESS) {
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError(error_str, vk_result);
+        PrintAndGotoIfError(error_str, vk_result, physicaldevicesmalloc_cleanup);
     }
 
     log_info("Finding the most suitable physical device");
     uint32_t best_physical_device_index;
     const bool has_physical_device = GetBestPhysicalDeviceWithSwapchainAndPresentationSupport(physical_device_info, physical_device_count, &best_physical_device_index, VK_QUEUE_GRAPHICS_BIT);
     if (!has_physical_device) {
-        CleanupPhysicalDeviceInformation(physical_device_info);
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError("Failed to find a suitable physical device", 1);
+        PrintAndGotoIfError("Failed to find a suitable physical device", 1, vkphysicaldeviceinfo_cleanup);
     }
 
     log_info("Suitable physical device found at index: %u: %s", best_physical_device_index, physical_device_info[best_physical_device_index].properties.deviceName);
@@ -154,10 +168,7 @@ int main(const int argc, char *argv[]) {
         VK_QUEUE_GRAPHICS_BIT,
         &graphic_queue_family);
     if (!has_graphic_queue_family) {
-        CleanupPhysicalDeviceInformation(physical_device_info);
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError("Failed to find a suitable graphics queue family", 1);
+        PrintAndGotoIfError("Failed to find a suitable graphics queue family", 1, vkphysicaldeviceinfo_cleanup);
     }
     log_debug("Found the graphics queue family: %u", graphic_queue_family);
 
@@ -180,20 +191,21 @@ int main(const int argc, char *argv[]) {
 
     vk_result = CreateVulkanDevice(physical_devices[best_physical_device_index], &device, queue_families, queue_family_count, device_extensions, ARRAY_SIZE(device_extensions), &error_str);
     if (vk_result != VK_SUCCESS) {
-        CleanupPhysicalDeviceInformation(physical_device_info);
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError(error_str, vk_result);
+        PrintAndGotoIfError(error_str, vk_result, vkphysicaldeviceinfo_cleanup);
     }
 
+    log_trace("Getting graphics queue");
+    VkQueue graphics_queue;
+    vkGetDeviceQueue(device, graphic_queue_family, 0, &graphics_queue);
+    log_trace("Getting presentation queue");
+    VkQueue present_queue;
+    vkGetDeviceQueue(device, present_queue_family, 0, &present_queue);
+
+    log_trace("Getting swapchain support details");
     SwapchainSupportDetails swapchain_support_details;
     vk_result = GetSwapchainSupportDetails(physical_devices[best_physical_device_index], surface, &swapchain_support_details, &error_str);
     if (vk_result != VK_SUCCESS) {
-        CleanupPhysicalDeviceInformation(physical_device_info);
-        vkDestroyDevice(device, nullptr);
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError(error_str, vk_result);
+        PrintAndGotoIfError(error_str, vk_result, vkdevice_cleanup);
     }
 
     VkSurfaceFormatKHR *surface_format;
@@ -227,27 +239,20 @@ int main(const int argc, char *argv[]) {
     VkImage *images;
     uint32_t image_count;
 
+    log_trace("Creating Vulkan swapchain");
     vk_result = CreateVulkanSwapchain(&create_swapchain_info, &swapchain, &images, &image_count, &error_str);
     if (vk_result != VK_SUCCESS) {
-        CleanupSwapchainSupportDetails(&swapchain_support_details);
-        CleanupPhysicalDeviceInformation(physical_device_info);
-        vkDestroyDevice(device, nullptr);
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError(error_str, vk_result);
+        PrintAndGotoIfError(error_str, vk_result, swapchainsupportdetails_cleanup);
     }
 
-    VkImageView image_views[image_count];
+    log_trace("Creating Vulkan image views");
+    auto image_views = (VkImageView *) malloc(image_count * sizeof(VkImageView));
+    if (!image_views) {
+        PrintAndGotoIfError("Failed to allocate memory for image views", 1, vkswapchain_cleanup);
+    }
     vk_result = CreateImageViews(device, images, image_count, image_views, surface_format->format, &error_str);
     if (vk_result != VK_SUCCESS) {
-        CleanupSwapchainSupportDetails(&swapchain_support_details);
-        CleanupPhysicalDeviceInformation(physical_device_info);
-        vkDestroySwapchainKHR(device, swapchain, nullptr);
-        vkDestroySurfaceKHR(instance, surface, nullptr);
-        vkDestroyDevice(device, nullptr);
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError(error_str, vk_result);
+        PrintAndGotoIfError(error_str, vk_result, imageviewsmalloc_cleanup);
     }
 
     constexpr unsigned char vertex_shader_code[] = {
@@ -261,28 +266,14 @@ int main(const int argc, char *argv[]) {
     VkShaderModule vertex_shader_module;
     VkShaderModule fragment_shader_module;
 
+    log_trace("Creating Vulkan shader modules for vertex and fragment shaders");
     vk_result = CreateShaderModule(vertex_shader_code, vertex_shader_code_size, device, &vertex_shader_module, &error_str);
     if (vk_result != VK_SUCCESS) {
-        CleanupSwapchainSupportDetails(&swapchain_support_details);
-        CleanupPhysicalDeviceInformation(physical_device_info);
-        vkDestroySwapchainKHR(device, swapchain, nullptr);
-        vkDestroySurfaceKHR(instance, surface, nullptr);
-        vkDestroyDevice(device, nullptr);
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError(error_str, vk_result);
+        PrintAndGotoIfError(error_str, vk_result, imageviewsmalloc_cleanup);
     }
     vk_result = CreateShaderModule(fragment_shader_code, fragment_shader_code_size, device, &fragment_shader_module, &error_str);
     if (vk_result != VK_SUCCESS) {
-        vkDestroyShaderModule(device, vertex_shader_module, nullptr);
-        CleanupSwapchainSupportDetails(&swapchain_support_details);
-        CleanupPhysicalDeviceInformation(physical_device_info);
-        vkDestroySwapchainKHR(device, swapchain, nullptr);
-        vkDestroySurfaceKHR(instance, surface, nullptr);
-        vkDestroyDevice(device, nullptr);
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        ExitOnError(error_str, vk_result);
+        PrintAndGotoIfError(error_str, vk_result, vertshadermod_cleanup);
     }
 
     const VkPipelineVertexInputStateCreateInfo vertex_input_info = {
@@ -299,7 +290,7 @@ int main(const int argc, char *argv[]) {
     VkRenderPass render_pass;
     VkPipeline pipeline;
 
-    log_debug("Creating graphics pipeline");
+    log_trace("Creating graphics pipeline");
 
     vk_result = CreateGraphicsPipeline(device,
         vertex_shader_module,
@@ -313,37 +304,98 @@ int main(const int argc, char *argv[]) {
         &error_str);
 
     if (vk_result != VK_SUCCESS) {
-        vkDestroyShaderModule(device, fragment_shader_module, nullptr);
-        vkDestroyShaderModule(device, vertex_shader_module, nullptr);
-        CleanupSwapchainSupportDetails(&swapchain_support_details);
-        CleanupPhysicalDeviceInformation(physical_device_info);
-        vkDestroySwapchainKHR(device, swapchain, nullptr);
-        vkDestroySurfaceKHR(instance, surface, nullptr);
-        vkDestroyDevice(device, nullptr);
-        vkDestroyInstance(instance, nullptr);
-        glfwTerminate();
-        log_error("Failed to create graphics pipeline: %d", vk_result);
-        ExitOnError(error_str, vk_result);
+        PrintAndGotoIfError(error_str, vk_result, fragshadermod_cleanup);
     }
 
-    // while (!glfwWindowShouldClose(window)) {
-    //     glfwPollEvents();
-    // }
+    auto framebuffers = (VkFramebuffer *) malloc(sizeof(VkFramebuffer) * image_count);
+    if (!framebuffers) {
+        PrintAndGotoIfError("Failed to allocate memory for framebuffers", 1, pipeline_cleanup);
+    }
+
+    vk_result = CreateFramebuffers(device, image_views, image_count, render_pass, framebuffers, &extent, &error_str);
+    if (vk_result != VK_SUCCESS) {
+        PrintAndGotoIfError(error_str, vk_result, pipeline_cleanup);
+    }
+
+    log_trace("Creating command pool");
+    VkCommandPool command_pool;
+    vk_result = CreateCommandPool(device, graphic_queue_family, &command_pool, &error_str);
+    if (vk_result != VK_SUCCESS) {
+        PrintAndGotoIfError(error_str, vk_result, framebuffers_cleanup);
+    }
+
+    log_trace("Creating command buffers");
+    VkCommandBuffer command_buffer;
+    vk_result = CreateCommandBuffers(device, command_pool, 1, &command_buffer, &error_str);
+    if (vk_result != VK_SUCCESS) {
+        PrintAndGotoIfError(error_str, vk_result, commandpool_cleanup);
+    }
+
+    log_trace("Recording sync objects");
+    VkSemaphore image_available_semaphore;
+    auto render_finished_semaphores = (VkSemaphore *) malloc(sizeof(VkSemaphore) * image_count);
+    VkFence in_flight_fence;
+    vk_result = CreateSyncObjects(&device, &in_flight_fence, &image_available_semaphore, &render_finished_semaphores, image_count, &error_str);
+    if (vk_result != VK_SUCCESS) {
+        PrintAndGotoIfError(error_str, vk_result, commandpool_cleanup);
+    }
+
+    log_trace("Starting main loop");
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+        vk_result = DrawFrame(device, &in_flight_fence, &image_available_semaphore, &render_finished_semaphores,
+            swapchain, command_buffer, render_pass, framebuffers,
+            pipeline, &extent, graphics_queue, &error_str);
+        if (vk_result != VK_SUCCESS) {
+            PrintAndGotoIfError(error_str, vk_result, syncobjects_cleanup);
+        }
+    }
+
+    log_info("Waiting for device to become idle before cleanup");
+    vkDeviceWaitIdle(device);
 
     log_info("Clearing resources");
-    CleanupImageViews(device, image_views, image_count);
+
+    syncobjects_cleanup:
+    vkDestroySemaphore(device, image_available_semaphore, nullptr);
+    for (uint32_t i = 0; i < image_count; i++) {
+        vkDestroySemaphore(device, render_finished_semaphores[i], nullptr);
+    }
+    vkDestroyFence(device, in_flight_fence, nullptr);
+    commandpool_cleanup:
+    vkDestroyCommandPool(device, command_pool, nullptr);
+    framebuffers_cleanup:
+    for (uint32_t i = 0; i < image_count; ++i) {
+        vkDestroyFramebuffer(device, framebuffers[i], nullptr);
+    }
+    pipeline_cleanup:
     vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
     vkDestroyRenderPass(device, render_pass, nullptr);
     vkDestroyPipeline(device, pipeline, nullptr);
+    fragshadermod_cleanup:
     vkDestroyShaderModule(device, fragment_shader_module, nullptr);
+    vertshadermod_cleanup:
     vkDestroyShaderModule(device, vertex_shader_module, nullptr);
-    CleanupSwapchainSupportDetails(&swapchain_support_details);
-    CleanupPhysicalDeviceInformation(physical_device_info);
+    vkswapchain_cleanup:
     vkDestroySwapchainKHR(device, swapchain, nullptr);
-    vkDestroySurfaceKHR(instance, surface, nullptr);
+    imageviews_cleanup:
+    CleanupImageViews(device, image_views, image_count);
+    imageviewsmalloc_cleanup:
+    free((void *) image_views);
+    swapchainsupportdetails_cleanup:
+    CleanupSwapchainSupportDetails(&swapchain_support_details);
+    vkdevice_cleanup:
     vkDestroyDevice(device, nullptr);
+    vkphysicaldeviceinfo_cleanup:
+    CleanupPhysicalDeviceInformation(physical_device_info);
+    physicaldevicesmalloc_cleanup:
+    free((void *) physical_devices);
+    vksurface_cleanup:
+    vkDestroySurfaceKHR(instance, surface, nullptr);
+    vkinstance_cleanup:
     vkDestroyInstance(instance, nullptr);
+    glfw_cleanup:
     glfwTerminate();
 
-    return 0;
+    return _current_error_status;
 }

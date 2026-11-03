@@ -1,10 +1,7 @@
 #include "vk_shader.h"
 
 #include "vulkan/vulkan.h"
-
-#define RETURN_ERROR(msg, code) \
-    *error_message = msg; \
-    return code
+#include "vk_helper.h"
 
 VkResult CreateShaderModule(const unsigned char *code, const size_t code_size, const VkDevice device, VkShaderModule *shader_module, char **error_message) {
     const VkShaderModuleCreateInfo create_info = {

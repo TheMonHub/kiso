@@ -87,6 +87,10 @@ set_target_properties(logger-c PROPERTIES
 
 target_include_directories(logger-c PUBLIC logger)
 
+# --------------------------------------------------
+# KISO
+# --------------------------------------------------
+
 add_executable(kiso
         src/main.c
         src/vulkan/vk_init.c
@@ -105,6 +109,9 @@ add_executable(kiso
         src/vulkan/vk_shader.h
         src/vulkan/vk_cleanup.c
         src/vulkan/vk_cleanup.h
+        src/vulkan/vk_render.c
+        src/vulkan/vk_render.h
+        src/vulkan/vk_helper.h
 )
 
 if(VULKAN_HEADERS_ONLY)

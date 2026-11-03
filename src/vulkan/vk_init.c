@@ -14,10 +14,7 @@
 #include "vk_shader.h"
 #include "util/enum_to_str.h"
 #include "util/math.h"
-
-#define RETURN_ERROR(msg, code) \
-    *error_message = msg; \
-    return code
+#include "vk_helper.h"
 
 static constexpr uint64_t kMaxDeviceSizeScore = 1280;
 
@@ -226,9 +223,9 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
             log_trace("Physical device %d memory heap %d score: %llu", i, j, size_score);
         }
 
-        log_debug(LINE_SEPARATOR);
-        log_debug("Physical device %d score: %llu", i, device_information->score);
-        log_debug(LINE_SEPARATOR);
+        log_trace(LINE_SEPARATOR);
+        log_trace("Physical device %d score: %llu", i, device_information->score);
+        log_trace(LINE_SEPARATOR);
     }
 
     return VK_SUCCESS;
@@ -716,6 +713,16 @@ VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vert
         .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     };
 
+    const VkSubpassDependency dependency = {
+        .srcSubpass = VK_SUBPASS_EXTERNAL,
+        .dstSubpass = 0,
+        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .srcAccessMask = 0,
+        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+        .dependencyFlags = 0
+    };
+
     VkSubpassDescription subpass = {
         .flags = 0,
         .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -737,8 +744,8 @@ VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vert
         .pAttachments = &color_attachment,
         .subpassCount = 1,
         .pSubpasses = &subpass,
-        .dependencyCount = 0,
-        .pDependencies = nullptr
+        .dependencyCount = 1,
+        .pDependencies = &dependency
     };
 
     log_trace("Creating render pass");
@@ -776,6 +783,104 @@ VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vert
         vkDestroyPipelineLayout(device, *pipeline_layout, nullptr);
         vkDestroyRenderPass(device, *render_pass, nullptr);
         RETURN_ERROR("Failed to create graphics pipeline", vk_result);
+    }
+
+    return VK_SUCCESS;
+}
+
+VkResult CreateFramebuffers(const VkDevice device, const VkImageView *image_views, const uint32_t image_count, const VkRenderPass render_pass, VkFramebuffer *framebuffers, const VkExtent2D *extent, char **error_message) {
+    for (uint32_t i = 0; i < image_count; ++i) {
+        const VkFramebufferCreateInfo framebuffer_info = {
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = 0,
+            .renderPass = render_pass,
+            .attachmentCount = 1,
+            .pAttachments = &image_views[i],
+            .width = extent->width,
+            .height = extent->height,
+            .layers = 1
+        };
+
+        const VkResult vk_result = vkCreateFramebuffer(device, &framebuffer_info, nullptr, &framebuffers[i]);
+        if (vk_result != VK_SUCCESS) {
+            RETURN_ERROR("Failed to create framebuffer", vk_result);
+        }
+    }
+
+    return VK_SUCCESS;
+}
+
+VkResult CreateCommandPool(const VkDevice device, const uint32_t queue_family_index, VkCommandPool *command_pool, char **error_message) {
+    const VkCommandPoolCreateInfo pool_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = queue_family_index
+    };
+
+    const VkResult vk_result = vkCreateCommandPool(device, &pool_info, nullptr, command_pool);
+    if (vk_result != VK_SUCCESS) {
+        RETURN_ERROR("Failed to create command pool", vk_result);
+    }
+
+    return VK_SUCCESS;
+}
+
+VkResult CreateCommandBuffers(const VkDevice device, const VkCommandPool command_pool, const uint32_t command_buffer_count, VkCommandBuffer *command_buffers, char **error_message) {
+    const VkCommandBufferAllocateInfo alloc_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .commandPool = command_pool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = command_buffer_count
+    };
+
+    const VkResult vk_result = vkAllocateCommandBuffers(device, &alloc_info, command_buffers);
+    if (vk_result != VK_SUCCESS) {
+        RETURN_ERROR("Failed to allocate command buffers", vk_result);
+    }
+
+    return VK_SUCCESS;
+}
+
+VkResult CreateSyncObjects(const VkDevice *device, VkFence *in_flight_fence, VkSemaphore *image_available_semaphore, VkSemaphore **render_finished_semaphores, const uint32_t image_count, char **error_message) {
+    const VkSemaphoreCreateInfo semaphore_info = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0
+    };
+
+    const VkFenceCreateInfo fence_info = {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT
+    };
+
+    log_trace("Instructed to create Vulkan sync objects for %u render finished semaphores", image_count);
+    log_trace("Creating image available semaphore");
+    VkResult vk_result = vkCreateSemaphore(*device, &semaphore_info, nullptr, image_available_semaphore);
+    if (vk_result != VK_SUCCESS) {
+        RETURN_ERROR("Failed to create image available semaphore", vk_result);
+    }
+    log_trace("Creating render finished semaphores");
+    for (uint32_t i = 0; i < image_count; i++) {
+        vk_result = vkCreateSemaphore(*device, &semaphore_info, nullptr, &(*render_finished_semaphores)[i]);
+        if (vk_result != VK_SUCCESS) {
+            vkDestroySemaphore(*device, *image_available_semaphore, nullptr);
+            for (uint32_t j = 0; j < i; j++) {
+                vkDestroySemaphore(*device, (*render_finished_semaphores)[j], nullptr);
+            }
+            RETURN_ERROR("Failed to create render finished semaphore", vk_result);
+        }
+    }
+    vk_result = vkCreateFence(*device, &fence_info, nullptr, in_flight_fence);
+    if (vk_result != VK_SUCCESS) {
+        vkDestroySemaphore(*device, *image_available_semaphore, nullptr);
+        for (uint32_t i = 0; i < image_count; i++) {
+            vkDestroySemaphore(*device, *render_finished_semaphores[i], nullptr);
+        }
+        RETURN_ERROR("Failed to create in-flight fence", vk_result);
     }
 
     return VK_SUCCESS;
