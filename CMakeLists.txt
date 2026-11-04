@@ -112,6 +112,9 @@ add_executable(kiso
         src/vulkan/vk_render.c
         src/vulkan/vk_render.h
         src/vulkan/vk_helper.h
+        src/vulkan/vk_const.h
+        src/glfw/glfw_callbacks.c
+        src/glfw/glfw_callbacks.h
 )
 
 if(VULKAN_HEADERS_ONLY)

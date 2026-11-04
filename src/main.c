@@ -11,6 +11,7 @@
 #include "vulkan/vk_init.h"
 #include "vulkan/vk_shader.h"
 #include "vulkan/vk_render.h"
+#include "glfw/glfw_callbacks.h"
 
 static void PrintProjectInfo() {
     log_info("========== KISO ===========");
@@ -41,6 +42,15 @@ int main(const int argc, char *argv[]) {
             break;
         }
     }
+#else
+    log_set_level(DEFAULT, LOG_DEBUG);
+
+    for (int i = 0; i < argc; i++) {
+        if (strcmp(argv[i], "--trace") == 0) {
+            log_set_level(DEFAULT, LOG_TRACE);
+            break;
+        }
+    }
 #endif
 
     int _current_error_status = 0;
@@ -52,7 +62,7 @@ int main(const int argc, char *argv[]) {
 
     log_info("Initializing Application");
 
-    log_trace("Initializing GLFW");
+    log_debug("Initializing GLFW");
     if (!glfwInit()) {
         ExitOnError("Failed to initialize GLFW", 1);
     }
@@ -63,36 +73,36 @@ int main(const int argc, char *argv[]) {
 
     log_info("Creating a window");
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     GLFWwindow* window = glfwCreateWindow(desired_window_width, desired_window_height, "KISO", NULL, NULL);
     if (window == nullptr)
     {
         PrintAndGotoIfError("Failed to create window", 1, glfw_cleanup);
     }
 
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
+    int win_size_width, win_size_height;
+    glfwGetWindowSize(window, &win_size_width, &win_size_height);
 
     log_debug("Desired window size: %d x %d", desired_window_width, desired_window_height);
-    log_debug("Initial window size: %d x %d", width, height);
+    log_debug("Initial window size: %d x %d", win_size_width, win_size_height);
 
-    if (width != desired_window_width || height != desired_window_height) {
-        log_warn("Window size does not match desired size. Desired size: %d x %d Actual size: %d x %d", desired_window_width, desired_window_height, width, height);
+    if (win_size_width != desired_window_width || win_size_height != desired_window_height) {
+        log_warn("Window size does not match desired size. Desired size: %d x %d Actual size: %d x %d", desired_window_width, desired_window_height, win_size_width, win_size_height);
         log_warn("Resizing window to desired size");
 
         log_debug("Resizing window since it does not match the desired size initially");
         glfwSetWindowSize(window, 640, 480);
         log_debug("Window size resized to: %d x %d", desired_window_width, desired_window_height);
 
-        glfwGetWindowSize(window, &width, &height);
-        log_debug("Actual window size after resize: %d x %d", width, height);
+        glfwGetWindowSize(window, &win_size_width, &win_size_height);
+        log_debug("Actual window size after resize: %d x %d", win_size_width, win_size_height);
 
-        if (width != desired_window_width || height != desired_window_height) {
-            log_error("Window size does not match desired size after resize. Desired size: %d x %d Actual size: %d x %d", desired_window_width, desired_window_height, width, height);
+        if (win_size_width != desired_window_width || win_size_height != desired_window_height) {
+            log_error("Window size does not match desired size after resize. Desired size: %d x %d Actual size: %d x %d", desired_window_width, desired_window_height, win_size_width, win_size_height);
         }
     }
 
-    log_trace("Fetching required Vulkan instance extensions from GLFW");
+    log_debug("Fetching required Vulkan instance extensions from GLFW");
     uint32_t glfw_extensions_count;
     const char **glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extensions_count);
     if (!glfw_extensions) {
@@ -104,7 +114,7 @@ int main(const int argc, char *argv[]) {
     }
 
     log_info("Initializing Vulkan");
-    log_trace("Creating Vulkan Instance");
+    log_debug("Creating Vulkan Instance");
     VkInstance instance;
     VkResult vk_result = CreateVulkanInstance(&instance, glfw_extensions, glfw_extensions_count, 0);
     if (vk_result != VK_SUCCESS) {
@@ -112,15 +122,15 @@ int main(const int argc, char *argv[]) {
         PrintAndGotoIfError("Failed to create Vulkan instance", vk_result, glfw_cleanup);
     }
 
-    log_trace("Creating window surface");
+    log_debug("Creating window surface");
     VkSurfaceKHR surface;
-    vk_result = glfwCreateWindowSurface(instance, window, NULL, &surface);
+    vk_result = glfwCreateWindowSurface(instance, window, nullptr, &surface);
     if (vk_result != VK_SUCCESS)
     {
         PrintAndGotoIfError("Failed to create window surface", vk_result, vkinstance_cleanup);
     }
 
-    log_trace("Getting Vulkan physical devices and its information");
+    log_debug("Getting Vulkan physical devices and its information");
     uint32_t physical_device_count;
 
     vk_result = vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr);
@@ -160,7 +170,7 @@ int main(const int argc, char *argv[]) {
 
     log_info("Suitable physical device found at index: %u: %s", best_physical_device_index, physical_device_info[best_physical_device_index].properties.deviceName);
 
-    log_trace("Getting the graphics queue family");
+    log_debug("Getting the graphics queue family");
     uint32_t graphic_queue_family;
     const bool has_graphic_queue_family = GetQueueFamilyIndexWithRequiredFlags(
         physical_device_info[best_physical_device_index].queue_family_count,
@@ -194,14 +204,14 @@ int main(const int argc, char *argv[]) {
         PrintAndGotoIfError(error_str, vk_result, vkphysicaldeviceinfo_cleanup);
     }
 
-    log_trace("Getting graphics queue");
+    log_debug("Getting graphics queue");
     VkQueue graphics_queue;
     vkGetDeviceQueue(device, graphic_queue_family, 0, &graphics_queue);
-    log_trace("Getting presentation queue");
+    log_debug("Getting presentation queue");
     VkQueue present_queue;
     vkGetDeviceQueue(device, present_queue_family, 0, &present_queue);
 
-    log_trace("Getting swapchain support details");
+    log_debug("Getting swapchain support details");
     SwapchainSupportDetails swapchain_support_details;
     vk_result = GetSwapchainSupportDetails(physical_devices[best_physical_device_index], surface, &swapchain_support_details, &error_str);
     if (vk_result != VK_SUCCESS) {
@@ -211,7 +221,7 @@ int main(const int argc, char *argv[]) {
     VkSurfaceFormatKHR *surface_format;
     VkPresentModeKHR present_mode;
     const bool is_preferred_surface_format = ChoosePreferredSurfaceFormat(swapchain_support_details.formats, swapchain_support_details.format_count, VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR, &surface_format);
-    const bool is_preferred_present_mode = choosePreferredPresentMode(swapchain_support_details.present_modes, swapchain_support_details.present_mode_count, VK_PRESENT_MODE_MAILBOX_KHR, &present_mode);
+    const bool is_preferred_present_mode = ChoosePreferredPresentMode(swapchain_support_details.present_modes, swapchain_support_details.present_mode_count, VK_PRESENT_MODE_MAILBOX_KHR, &present_mode);
 
     if (!is_preferred_surface_format) {
         log_info("Preferred surface format not found, using first available format");
@@ -220,7 +230,9 @@ int main(const int argc, char *argv[]) {
         log_info("Preferred present mode not found, using first available present mode");
     }
 
-    const VkExtent2D extent = chooseVulkanExtent(&swapchain_support_details.capabilities, window);
+    int framebuffer_width, framebuffer_height;
+    glfwGetFramebufferSize(window, &framebuffer_width, &framebuffer_height);
+    VkExtent2D extent = ChooseVulkanExtent(&swapchain_support_details.capabilities, framebuffer_width, framebuffer_height);
 
     const CreateSwapchainInfo create_swapchain_info = {
         .device = device,
@@ -239,13 +251,13 @@ int main(const int argc, char *argv[]) {
     VkImage *images;
     uint32_t image_count;
 
-    log_trace("Creating Vulkan swapchain");
+    log_debug("Creating Vulkan swapchain");
     vk_result = CreateVulkanSwapchain(&create_swapchain_info, &swapchain, &images, &image_count, &error_str);
     if (vk_result != VK_SUCCESS) {
         PrintAndGotoIfError(error_str, vk_result, swapchainsupportdetails_cleanup);
     }
 
-    log_trace("Creating Vulkan image views");
+    log_debug("Creating Vulkan image views");
     auto image_views = (VkImageView *) malloc(image_count * sizeof(VkImageView));
     if (!image_views) {
         PrintAndGotoIfError("Failed to allocate memory for image views", 1, vkswapchain_cleanup);
@@ -266,10 +278,10 @@ int main(const int argc, char *argv[]) {
     VkShaderModule vertex_shader_module;
     VkShaderModule fragment_shader_module;
 
-    log_trace("Creating Vulkan shader modules for vertex and fragment shaders");
+    log_debug("Creating Vulkan shader modules for vertex and fragment shaders");
     vk_result = CreateShaderModule(vertex_shader_code, vertex_shader_code_size, device, &vertex_shader_module, &error_str);
     if (vk_result != VK_SUCCESS) {
-        PrintAndGotoIfError(error_str, vk_result, imageviewsmalloc_cleanup);
+        PrintAndGotoIfError(error_str, vk_result, imageviews_cleanup);
     }
     vk_result = CreateShaderModule(fragment_shader_code, fragment_shader_code_size, device, &fragment_shader_module, &error_str);
     if (vk_result != VK_SUCCESS) {
@@ -290,7 +302,7 @@ int main(const int argc, char *argv[]) {
     VkRenderPass render_pass;
     VkPipeline pipeline;
 
-    log_trace("Creating graphics pipeline");
+    log_debug("Creating graphics pipeline");
 
     vk_result = CreateGraphicsPipeline(device,
         vertex_shader_module,
@@ -317,35 +329,84 @@ int main(const int argc, char *argv[]) {
         PrintAndGotoIfError(error_str, vk_result, pipeline_cleanup);
     }
 
-    log_trace("Creating command pool");
+    log_debug("Creating command pool");
     VkCommandPool command_pool;
     vk_result = CreateCommandPool(device, graphic_queue_family, &command_pool, &error_str);
     if (vk_result != VK_SUCCESS) {
         PrintAndGotoIfError(error_str, vk_result, framebuffers_cleanup);
     }
 
-    log_trace("Creating command buffers");
-    VkCommandBuffer command_buffer;
-    vk_result = CreateCommandBuffers(device, command_pool, 1, &command_buffer, &error_str);
+    log_debug("Creating command buffers");
+    auto command_buffers = (VkCommandBuffer *) malloc(sizeof(VkCommandBuffer) * kMaxFramesInFlight);
+    vk_result = CreateCommandBuffers(device, command_pool, kMaxFramesInFlight, command_buffers, &error_str);
     if (vk_result != VK_SUCCESS) {
         PrintAndGotoIfError(error_str, vk_result, commandpool_cleanup);
     }
 
-    log_trace("Recording sync objects");
-    VkSemaphore image_available_semaphore;
+    log_debug("Recording sync objects");
+    auto image_available_semaphores = (VkSemaphore *) malloc(sizeof(VkSemaphore));
     auto render_finished_semaphores = (VkSemaphore *) malloc(sizeof(VkSemaphore) * image_count);
-    VkFence in_flight_fence;
-    vk_result = CreateSyncObjects(&device, &in_flight_fence, &image_available_semaphore, &render_finished_semaphores, image_count, &error_str);
+    auto in_flight_fence = (VkFence *) malloc(sizeof(VkFence));
+    vk_result = CreateSyncObjects(device, &in_flight_fence, &image_available_semaphores, &render_finished_semaphores, kMaxFramesInFlight, image_count, &error_str);
     if (vk_result != VK_SUCCESS) {
-        PrintAndGotoIfError(error_str, vk_result, commandpool_cleanup);
+        PrintAndGotoIfError(error_str, vk_result, commandbuffersmalloc_cleanup);
     }
 
-    log_trace("Starting main loop");
+    log_debug("Setting up GLFW window callbacks");
+    bool is_framebuffer_resized = false;
+    glfwSetWindowUserPointer(window, &is_framebuffer_resized);
+    glfwSetFramebufferSizeCallback(window, (GLFWframebuffersizefun) GlfwCallbackSetPointerTrue);
+
+    uint32_t current_frame = 0;
+
+    log_info("Starting main loop");
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
-        vk_result = DrawFrame(device, &in_flight_fence, &image_available_semaphore, &render_finished_semaphores,
-            swapchain, command_buffer, render_pass, framebuffers,
-            pipeline, &extent, graphics_queue, &error_str);
+
+        RenderContext render_context = {
+            .device = device,
+            .graphics_queue = graphics_queue,
+            .swapchain = &swapchain,
+            .command_buffers = command_buffers,
+            .render_pass = render_pass,
+            .framebuffers = &framebuffers,
+            .pipeline = pipeline,
+            .in_flight_fences = in_flight_fence,
+            .image_available_semaphores = image_available_semaphores,
+            .render_finished_semaphores = render_finished_semaphores,
+            .extent = &extent,
+            .current_frame = &current_frame
+        };
+
+        SwapchainRecreationInfo swapchain_recreation_info = {
+            .swapchain_support = &swapchain_support_details,
+            .surface_format = surface_format,
+            .present_mode = present_mode,
+            .surface = &surface,
+            .graphics_family_index = graphic_queue_family,
+            .present_family_index = present_queue_family,
+            .composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+            .image_count = image_count,
+            .images = &images,
+            .image_views = &image_views,
+            .window = window
+        };
+
+        if (is_framebuffer_resized) {
+            is_framebuffer_resized = false;
+            vk_result = RecreateSwapchain(&render_context, &swapchain_recreation_info, &error_str);
+            if (vk_result == VK_ERROR_UNKNOWN && error_str == nullptr) {
+                break;
+            }
+            if (vk_result != VK_SUCCESS) {
+                PrintAndGotoIfError(error_str, vk_result, syncobjects_cleanup);
+            }
+        }
+        vk_result = DrawFrame(&render_context, &swapchain_recreation_info, &error_str);
+        // this means window is closed. Do not error.
+        if (vk_result == VK_ERROR_UNKNOWN && error_str == nullptr) {
+            break;
+        }
         if (vk_result != VK_SUCCESS) {
             PrintAndGotoIfError(error_str, vk_result, syncobjects_cleanup);
         }
@@ -357,17 +418,20 @@ int main(const int argc, char *argv[]) {
     log_info("Clearing resources");
 
     syncobjects_cleanup:
-    vkDestroySemaphore(device, image_available_semaphore, nullptr);
-    for (uint32_t i = 0; i < image_count; i++) {
-        vkDestroySemaphore(device, render_finished_semaphores[i], nullptr);
-    }
-    vkDestroyFence(device, in_flight_fence, nullptr);
+    CleanupSemaphores(device, image_available_semaphores, kMaxFramesInFlight);
+    CleanupSemaphores(device, render_finished_semaphores, image_count);
+    CleanupFences(device, in_flight_fence, kMaxFramesInFlight);
+    free((void *) image_available_semaphores);
+    free((void *) render_finished_semaphores);
+    free((void *) in_flight_fence);
+    commandbuffersmalloc_cleanup:
+    free((void *) command_buffers);
     commandpool_cleanup:
     vkDestroyCommandPool(device, command_pool, nullptr);
     framebuffers_cleanup:
-    for (uint32_t i = 0; i < image_count; ++i) {
-        vkDestroyFramebuffer(device, framebuffers[i], nullptr);
-    }
+    CleanupFramebuffers(device, framebuffers, image_count);
+    framebuffersmalloc_cleanup:
+    free((void *) framebuffers);
     pipeline_cleanup:
     vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
     vkDestroyRenderPass(device, render_pass, nullptr);
@@ -376,12 +440,14 @@ int main(const int argc, char *argv[]) {
     vkDestroyShaderModule(device, fragment_shader_module, nullptr);
     vertshadermod_cleanup:
     vkDestroyShaderModule(device, vertex_shader_module, nullptr);
-    vkswapchain_cleanup:
-    vkDestroySwapchainKHR(device, swapchain, nullptr);
     imageviews_cleanup:
     CleanupImageViews(device, image_views, image_count);
     imageviewsmalloc_cleanup:
     free((void *) image_views);
+    vkswapchain_cleanup:
+    vkDestroySwapchainKHR(device, swapchain, nullptr);
+    imagesmalloc_cleanup:
+    free((void *) images);
     swapchainsupportdetails_cleanup:
     CleanupSwapchainSupportDetails(&swapchain_support_details);
     vkdevice_cleanup:

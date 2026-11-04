@@ -10,6 +10,7 @@
 
 #include "error.h"
 #include "logger.h"
+#include "vk_cleanup.h"
 #include "vk_convert.h"
 #include "vk_shader.h"
 #include "util/enum_to_str.h"
@@ -28,11 +29,11 @@ VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, con
         VK_API_VERSION_PATCH(CURRENT_VK_API_VERSION));
     log_info(LINE_SEPARATOR);
 
-    log_trace("Instructed to create a Vulkan instance with %d extensions:", extensions_count);
+    log_debug("Instructed to create a Vulkan instance with %d extensions:", extensions_count);
     for (uint32_t i = 0; i < extensions_count; i++) {
-        log_trace("Vulkan instance extension: %s", extensions[i]);
+        log_debug("Vulkan instance extension: %s", extensions[i]);
     }
-    log_trace("Vulkan instance flags: %08X", flags);
+    log_debug("Vulkan instance flags: %08X", flags);
 
     static const VkApplicationInfo application_info = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -92,7 +93,7 @@ static int GetScoreBasedOnHeapFlags(const VkFlags flags) {
 // Being the PhysicalDeviceInformation array, queue_family_properties array inside each PhysicalDeviceInformation entry all from the returned array.
 VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysicalDevice *physical_device, const uint32_t device_count,
     PhysicalDeviceInformation **info, const VkSurfaceKHR surface, char** error_message) {
-    log_trace("Instructed to get Vulkan physical devices information");
+    log_debug("Instructed to get Vulkan physical devices information");
 
     *info = calloc(device_count, sizeof(PhysicalDeviceInformation));
     if (*info == nullptr) {
@@ -143,13 +144,13 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
         ConvertQueueFamilyProperties(device_information->queue_family_properties, queue_family_count, queue_family_info);
 
         log_debug(LINE_SEPARATOR);
-        log_trace("Physical device %d has %d queue families", i, device_information->queue_family_count);
-        log_trace(LINE_SEPARATOR);
+        log_debug("Physical device %d has %d queue families", i, device_information->queue_family_count);
+        log_debug(LINE_SEPARATOR);
         QueueFamilyInfo *global_queue_family_info = &device_information->global_queue_family_info;
         for (uint32_t j = 0; j < device_information->queue_family_count; j++) {
             global_queue_family_info->queue_flags = global_queue_family_info->queue_flags | queue_family_info[j].queue_flags;
 
-            log_trace("Physical device %d queue family %d: graphics=%d, compute=%d, transfer=%d, sparse_binding=%d,"
+            log_debug("Physical device %d queue family %d: graphics=%d, compute=%d, transfer=%d, sparse_binding=%d,"
                       " protected=%d, video_decode=%d, video_encode=%d, optical_flow=%d, data_graph=%d",
                       i, j,
                       queue_family_info[j].graphics_bit,
@@ -164,11 +165,11 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
 
             VkBool32 surface_support = false;
             vkGetPhysicalDeviceSurfaceSupportKHR(physical_device[i], j, surface, &surface_support);
-            log_trace("Physical device %d queue family %d surface support: %d", i, j, surface_support);
+            log_debug("Physical device %d queue family %d surface support: %d", i, j, surface_support);
             if (!device_information->queue_family_surface_support_present && surface_support) {
                 device_information->queue_family_surface_support_index = j;
                 device_information->queue_family_surface_support_present = true;
-                log_trace("Physical device %d queue family %d is chosen for presentation", i, j);
+                log_debug("Physical device %d queue family %d is chosen for presentation", i, j);
             }
         }
 
@@ -232,9 +233,9 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
 }
 
 VkResult CreateVulkanDevice(const VkPhysicalDevice physical_device, VkDevice* vk_device, const uint32_t queue_family_index[], const uint32_t queue_family_count, const char * const extensions[], const uint32_t extension_count, char** error_message) {
-    log_trace("Instructed to create a Vulkan device with %d extensions:", extension_count);
+    log_debug("Instructed to create a Vulkan device with %d extensions:", extension_count);
     for (uint32_t i = 0; i < extension_count; i++) {
-        log_trace("Vulkan device extension: %s", extensions[i]);
+        log_debug("Vulkan device extension: %s", extensions[i]);
     }
 
     VkDeviceQueueCreateInfo queue_infos[queue_family_count];
@@ -442,7 +443,7 @@ bool ChoosePreferredSurfaceFormat(const VkSurfaceFormatKHR* surface_formats, con
     return false;
 }
 
-bool choosePreferredPresentMode(const VkPresentModeKHR* present_modes, const uint32_t present_mode_count, const VkPresentModeKHR preferred_present_mode, VkPresentModeKHR *present_mode) {
+bool ChoosePreferredPresentMode(const VkPresentModeKHR* present_modes, const uint32_t present_mode_count, const VkPresentModeKHR preferred_present_mode, VkPresentModeKHR *present_mode) {
     for (uint32_t i = 0; i < present_mode_count; i++) {
         if (present_modes[i] == preferred_present_mode) {
             *present_mode = present_modes[i];
@@ -453,12 +454,10 @@ bool choosePreferredPresentMode(const VkPresentModeKHR* present_modes, const uin
     return false;
 }
 
-VkExtent2D chooseVulkanExtent(const VkSurfaceCapabilitiesKHR *capabilities, GLFWwindow *window) {
+VkExtent2D ChooseVulkanExtent(const VkSurfaceCapabilitiesKHR *capabilities, const int width, const int height) {
     if (capabilities->currentExtent.width != UINT32_MAX) {
         return capabilities->currentExtent;
     }
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
 
     return (VkExtent2D) {
         .width = UnsignedClamp((uint32_t) width, capabilities->minImageExtent.width, capabilities->maxImageExtent.width),
@@ -490,8 +489,7 @@ VkResult CreateVulkanSwapchain(const CreateSwapchainInfo *info, VkSwapchainKHR *
         .preTransform = info->swapchain_support->capabilities.currentTransform,
         .compositeAlpha = info->composite_alpha,
         .presentMode = info->present_mode,
-        .clipped = VK_TRUE,
-        .oldSwapchain = VK_NULL_HANDLE
+        .clipped = VK_TRUE
     };
 
     if (info->graphics_family_index != info->present_family_index) {
@@ -563,7 +561,7 @@ VkResult CreateImageViews(const VkDevice device, const VkImage *images, const ui
 VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vertex_shader_module, const VkShaderModule fragment_shader_module,
     const VkPipelineVertexInputStateCreateInfo *vertex_input_info, const VkExtent2D *extent, VkPipelineLayout *pipeline_layout, VkRenderPass *render_pass,
     VkPipeline *pipeline, VkFormat image_format, char **error_message) {
-    log_trace("Instructed to create a Vulkan graphics pipeline");
+    log_debug("Instructed to create a Vulkan graphics pipeline");
     const VkPipelineShaderStageCreateInfo vertShaderStageInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .pNext = nullptr,
@@ -788,7 +786,7 @@ VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vert
     return VK_SUCCESS;
 }
 
-VkResult CreateFramebuffers(const VkDevice device, const VkImageView *image_views, const uint32_t image_count, const VkRenderPass render_pass, VkFramebuffer *framebuffers, const VkExtent2D *extent, char **error_message) {
+VkResult CreateFramebuffers(const VkDevice device, VkImageView *image_views, const uint32_t image_count, const VkRenderPass render_pass, VkFramebuffer *framebuffers, const VkExtent2D *extent, char **error_message) {
     for (uint32_t i = 0; i < image_count; ++i) {
         const VkFramebufferCreateInfo framebuffer_info = {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -836,15 +834,56 @@ VkResult CreateCommandBuffers(const VkDevice device, const VkCommandPool command
         .commandBufferCount = command_buffer_count
     };
 
-    const VkResult vk_result = vkAllocateCommandBuffers(device, &alloc_info, command_buffers);
-    if (vk_result != VK_SUCCESS) {
-        RETURN_ERROR("Failed to allocate command buffers", vk_result);
+    for (uint32_t i = 0; i < command_buffer_count; ++i) {
+        const VkResult vk_result = vkAllocateCommandBuffers(device, &alloc_info, command_buffers);
+        if (vk_result != VK_SUCCESS) {
+            RETURN_ERROR("Failed to allocate command buffers", vk_result);
+        }
     }
 
     return VK_SUCCESS;
 }
 
-VkResult CreateSyncObjects(const VkDevice *device, VkFence *in_flight_fence, VkSemaphore *image_available_semaphore, VkSemaphore **render_finished_semaphores, const uint32_t image_count, char **error_message) {
+static void DestroySyncObjects(
+    const VkDevice device,
+    VkFence *in_flight_fence,
+    VkSemaphore *image_available_semaphore,
+    VkSemaphore *render_finished_semaphores,
+    const uint32_t fence_count,
+    const uint32_t image_available_count,
+    const uint32_t render_finished_count
+) {
+    for (uint32_t i = 0; i < fence_count; i++) {
+        if (in_flight_fence[i] != VK_NULL_HANDLE) {
+            vkDestroyFence(device, in_flight_fence[i], nullptr);
+            in_flight_fence[i] = VK_NULL_HANDLE;
+        }
+    }
+
+    for (uint32_t i = 0; i < image_available_count; i++) {
+        if (image_available_semaphore[i] != VK_NULL_HANDLE) {
+            vkDestroySemaphore(device, image_available_semaphore[i], nullptr);
+            image_available_semaphore[i] = VK_NULL_HANDLE;
+        }
+    }
+
+    for (uint32_t i = 0; i < render_finished_count; i++) {
+        if (render_finished_semaphores[i] != VK_NULL_HANDLE) {
+            vkDestroySemaphore(device, render_finished_semaphores[i], nullptr);
+            render_finished_semaphores[i] = VK_NULL_HANDLE;
+        }
+    }
+}
+
+VkResult CreateSyncObjects(
+    const VkDevice device,
+    VkFence **in_flight_fence,
+    VkSemaphore **image_available_semaphore,
+    VkSemaphore **render_finished_semaphores,
+    const uint32_t command_buffer_count,
+    const uint32_t image_count,
+    char **error_message
+) {
     const VkSemaphoreCreateInfo semaphore_info = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
         .pNext = nullptr,
@@ -857,31 +896,60 @@ VkResult CreateSyncObjects(const VkDevice *device, VkFence *in_flight_fence, VkS
         .flags = VK_FENCE_CREATE_SIGNALED_BIT
     };
 
-    log_trace("Instructed to create Vulkan sync objects for %u render finished semaphores", image_count);
-    log_trace("Creating image available semaphore");
-    VkResult vk_result = vkCreateSemaphore(*device, &semaphore_info, nullptr, image_available_semaphore);
-    if (vk_result != VK_SUCCESS) {
-        RETURN_ERROR("Failed to create image available semaphore", vk_result);
-    }
-    log_trace("Creating render finished semaphores");
-    for (uint32_t i = 0; i < image_count; i++) {
-        vk_result = vkCreateSemaphore(*device, &semaphore_info, nullptr, &(*render_finished_semaphores)[i]);
+    uint32_t image_available_count = 0;
+    uint32_t render_finished_count = 0;
+    uint32_t fence_count = 0;
+
+    VkResult vk_result;
+
+    // Create frame-specific synchronization objects.
+    for (uint32_t i = 0; i < command_buffer_count; i++) {
+        vk_result = vkCreateSemaphore(
+            device, &semaphore_info, nullptr,
+            &(*image_available_semaphore)[i]
+        );
+
         if (vk_result != VK_SUCCESS) {
-            vkDestroySemaphore(*device, *image_available_semaphore, nullptr);
-            for (uint32_t j = 0; j < i; j++) {
-                vkDestroySemaphore(*device, (*render_finished_semaphores)[j], nullptr);
-            }
-            RETURN_ERROR("Failed to create render finished semaphore", vk_result);
+            goto cleanup;
         }
+        image_available_count++;
+
+        vk_result = vkCreateFence(
+            device, &fence_info, nullptr,
+            &(*in_flight_fence)[i]
+        );
+
+        if (vk_result != VK_SUCCESS) {
+            goto cleanup;
+        }
+        fence_count++;
     }
-    vk_result = vkCreateFence(*device, &fence_info, nullptr, in_flight_fence);
-    if (vk_result != VK_SUCCESS) {
-        vkDestroySemaphore(*device, *image_available_semaphore, nullptr);
-        for (uint32_t i = 0; i < image_count; i++) {
-            vkDestroySemaphore(*device, *render_finished_semaphores[i], nullptr);
+
+    // Create swapchain-image-specific synchronization objects.
+    for (uint32_t i = 0; i < image_count; i++) {
+        vk_result = vkCreateSemaphore(
+            device, &semaphore_info, nullptr,
+            &(*render_finished_semaphores)[i]
+        );
+
+        if (vk_result != VK_SUCCESS) {
+            goto cleanup;
         }
-        RETURN_ERROR("Failed to create in-flight fence", vk_result);
+        render_finished_count++;
     }
 
     return VK_SUCCESS;
+
+    cleanup:
+    DestroySyncObjects(
+        device,
+        *in_flight_fence,
+        *image_available_semaphore,
+        *render_finished_semaphores,
+        fence_count,
+        image_available_count,
+        render_finished_count
+    );
+
+    RETURN_ERROR("Failed to create synchronization objects", vk_result);
 }

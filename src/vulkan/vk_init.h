@@ -5,6 +5,7 @@
 
 #include "vk_convert.h"
 #include "GLFW/glfw3.h"
+#include "vk_const.h"
 
 #define CURRENT_VK_API_VERSION VK_API_VERSION_1_1
 
@@ -66,9 +67,9 @@ VkResult GetSwapchainSupportDetails(VkPhysicalDevice device, VkSurfaceKHR surfac
 
 bool ChoosePreferredSurfaceFormat(const VkSurfaceFormatKHR* surface_formats, uint32_t surface_format_count, VkFormat preferred_format, VkColorSpaceKHR preferred_color_space, VkSurfaceFormatKHR **surface_format) [[unsequenced]];
 
-bool choosePreferredPresentMode(const VkPresentModeKHR* present_modes, uint32_t present_mode_count, VkPresentModeKHR preferred_present_mode, VkPresentModeKHR *present_mode) [[unsequenced]];
+bool ChoosePreferredPresentMode(const VkPresentModeKHR* present_modes, uint32_t present_mode_count, VkPresentModeKHR preferred_present_mode, VkPresentModeKHR *present_mode) [[unsequenced]];
 
-VkExtent2D chooseVulkanExtent(const VkSurfaceCapabilitiesKHR *capabilities, GLFWwindow *window);
+VkExtent2D ChooseVulkanExtent(const VkSurfaceCapabilitiesKHR *capabilities, int width, int height);
 
 [[nodiscard]]
 VkResult CreateVulkanSwapchain(const CreateSwapchainInfo *info, VkSwapchainKHR *swapchain, VkImage **images, uint32_t *image_count, char** error_message);
@@ -82,7 +83,7 @@ VkResult CreateGraphicsPipeline(VkDevice device, VkShaderModule vertex_shader_mo
     VkPipeline *pipeline, VkFormat image_format, char **error_message);
 
 [[nodiscard]]
-VkResult CreateFramebuffers(VkDevice device, const VkImageView *image_views, uint32_t image_count, VkRenderPass render_pass, VkFramebuffer *framebuffers, const VkExtent2D *extent, char **error_message);
+VkResult CreateFramebuffers(VkDevice device, VkImageView *image_views, uint32_t image_count, VkRenderPass render_pass, VkFramebuffer *framebuffers, const VkExtent2D *extent, char **error_message);
 
 [[nodiscard]]
 VkResult CreateCommandPool(VkDevice device, uint32_t queue_family_index, VkCommandPool *command_pool, char **error_message);
@@ -91,6 +92,14 @@ VkResult CreateCommandPool(VkDevice device, uint32_t queue_family_index, VkComma
 VkResult CreateCommandBuffers(VkDevice device, VkCommandPool command_pool, uint32_t command_buffer_count, VkCommandBuffer *command_buffers, char **error_message);
 
 [[nodiscard]]
-VkResult CreateSyncObjects(const VkDevice *device, VkFence *in_flight_fence, VkSemaphore *image_available_semaphore, VkSemaphore **render_finished_semaphores, uint32_t image_count, char **error_message);
+VkResult CreateSyncObjects(
+    VkDevice device,
+    VkFence **in_flight_fence,
+    VkSemaphore **image_available_semaphore,
+    VkSemaphore **render_finished_semaphores,
+    uint32_t command_buffer_count,
+    uint32_t image_count,
+    char **error_message
+);
 
 #endif // VK_INIT_H

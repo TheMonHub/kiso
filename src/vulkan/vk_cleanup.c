@@ -17,3 +17,27 @@ void CleanupImageViews(const VkDevice device, const VkImageView *image_views, co
         vkDestroyImageView(device, image_views[i], nullptr);
     }
 }
+
+void CleanupImages(const VkDevice device, const VkImage *images, const uint32_t image_count) {
+    for (uint32_t i = 0; i < image_count; ++i) {
+        vkDestroyImage(device, images[i], nullptr);
+    }
+}
+
+void CleanupFramebuffers(const VkDevice device, const VkFramebuffer *framebuffers, const uint32_t framebuffer_count) {
+    for (uint32_t i = 0; i < framebuffer_count; ++i) {
+        vkDestroyFramebuffer(device, framebuffers[i], nullptr);
+    }
+}
+
+void CleanupSemaphores(const VkDevice device, const VkSemaphore *semaphores, const uint32_t semaphore_count) {
+    for (uint32_t i = 0; i < semaphore_count; ++i) {
+        vkDestroySemaphore(device, semaphores[i], nullptr);
+    }
+}
+
+void CleanupFences(const VkDevice device, const VkFence *fences, const uint32_t fence_count) {
+    for (uint32_t i = 0; i < fence_count; ++i) {
+        vkDestroyFence(device, fences[i], nullptr);
+    }
+}
