@@ -72,9 +72,6 @@ VkResult RecreateSwapchain(const RenderContext *render_context, const SwapchainR
     int width = 0, height = 0;
     glfwGetFramebufferSize(info->window, &width, &height);
     while (width == 0 || height == 0) {
-        if (glfwWindowShouldClose(info->window)) {
-            RETURN_ERROR(nullptr, VK_ERROR_UNKNOWN);
-        }
         log_trace("There is nothing to render! Waiting for a bigger framebuffer");
         glfwGetFramebufferSize(info->window, &width, &height);
         glfwWaitEvents();
@@ -135,9 +132,6 @@ VkResult DrawFrame(const RenderContext *render_context, const SwapchainRecreatio
         log_trace("Swapchain is out of date");
         char *error_result = nullptr;
         vk_result = RecreateSwapchain(render_context, swapchain_recreation_info, &error_result);
-        if (vk_result == VK_ERROR_UNKNOWN && error_result == nullptr) {
-            RETURN_ERROR(nullptr, VK_ERROR_UNKNOWN);
-        }
         if (vk_result != VK_SUCCESS) {
             log_error("Failed to recreate swapchain after out-of-date error");
             RETURN_ERROR(error_result, vk_result);
@@ -194,9 +188,6 @@ VkResult DrawFrame(const RenderContext *render_context, const SwapchainRecreatio
         log_trace("Swapchain is out of date");
         char *error_result = nullptr;
         vk_result = RecreateSwapchain(render_context, swapchain_recreation_info, &error_result);
-        if (vk_result == VK_ERROR_UNKNOWN && error_result == nullptr) {
-            RETURN_ERROR(nullptr, VK_ERROR_UNKNOWN);
-        }
         if (vk_result != VK_SUCCESS) {
             log_error("Failed to recreate swapchain after out-of-date error or framebuffer resize");
             RETURN_ERROR(error_result, vk_result);

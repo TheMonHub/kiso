@@ -395,18 +395,11 @@ int main(const int argc, char *argv[]) {
         if (is_framebuffer_resized) {
             is_framebuffer_resized = false;
             vk_result = RecreateSwapchain(&render_context, &swapchain_recreation_info, &error_str);
-            if (vk_result == VK_ERROR_UNKNOWN && error_str == nullptr) {
-                break;
-            }
             if (vk_result != VK_SUCCESS) {
                 PrintAndGotoIfError(error_str, vk_result, syncobjects_cleanup);
             }
         }
         vk_result = DrawFrame(&render_context, &swapchain_recreation_info, &error_str);
-        // this means window is closed. Do not error.
-        if (vk_result == VK_ERROR_UNKNOWN && error_str == nullptr) {
-            break;
-        }
         if (vk_result != VK_SUCCESS) {
             PrintAndGotoIfError(error_str, vk_result, syncobjects_cleanup);
         }
