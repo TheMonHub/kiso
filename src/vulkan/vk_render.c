@@ -133,7 +133,7 @@ VkResult DrawFrame(const RenderContext *render_context, const SwapchainRecreatio
         char *error_result = nullptr;
         vk_result = RecreateSwapchain(render_context, swapchain_recreation_info, &error_result);
         if (vk_result != VK_SUCCESS) {
-            log_error("Failed to recreate swapchain after out-of-date error");
+            log_error("Failed to recreate swapchain after out-of-date or suboptimal error");
             RETURN_ERROR(error_result, vk_result);
         }
     }
@@ -189,7 +189,7 @@ VkResult DrawFrame(const RenderContext *render_context, const SwapchainRecreatio
         char *error_result = nullptr;
         vk_result = RecreateSwapchain(render_context, swapchain_recreation_info, &error_result);
         if (vk_result != VK_SUCCESS) {
-            log_error("Failed to recreate swapchain after out-of-date error or framebuffer resize");
+            log_error("Failed to recreate swapchain after out-of-date or suboptimal error");
             RETURN_ERROR(error_result, vk_result);
         }
     }
