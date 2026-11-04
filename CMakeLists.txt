@@ -5,9 +5,6 @@ project(kiso
         LANGUAGES C
 )
 
-option(VULKAN_HEADERS_ONLY "Use only Vulkan headers")
-option(GLFW_HEADERS_ONLY "Use only GLFW headers")
-
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
@@ -33,20 +30,11 @@ set(CMAKE_C_CLANG_TIDY
         "--warnings-as-errors=*"
 )
 
-if(VULKAN_HEADERS_ONLY)
-    find_package(VulkanHeaders CONFIG REQUIRED)
-else()
-    find_package(Vulkan COMPONENTS REQUIRED)
-endif()
-
-if(NOT GLFW_HEADERS_ONLY)
-    set(GLFW_TARGET glfw)
-    find_package(glfw3 REQUIRED)
-endif()
-
+find_package(Vulkan COMPONENTS REQUIRED)
+find_package(glfw3 REQUIRED)
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(cglm REQUIRED IMPORTED_TARGET cglm)
-pkg_check_modules(tinyobjloader REQUIRED IMPORTED_TARGET tinyobjloader)
+# pkg_check_modules(cglm REQUIRED IMPORTED_TARGET cglm)
+# pkg_check_modules(tinyobjloader REQUIRED IMPORTED_TARGET tinyobjloader)
 
 # --------------------------------------------------
 # Get git commit hash and branch
@@ -117,27 +105,14 @@ add_executable(kiso
         src/glfw/glfw_callbacks.h
 )
 
-if(VULKAN_HEADERS_ONLY)
-    target_link_libraries(kiso
-            Vulkan::Headers
-            ${GLFW_TARGET}
-            PkgConfig::cglm
-            PkgConfig::tinyobjloader
-            logger-c
-    )
-else()
-    target_link_libraries(kiso
-            Vulkan::Vulkan
-            ${GLFW_TARGET}
-            PkgConfig::cglm
-            PkgConfig::tinyobjloader
-            logger-c
-    )
-endif()
+target_link_libraries(kiso
+        Vulkan::Vulkan
+        glfw
+        logger-c
+)
 
 target_include_directories(kiso PRIVATE
         src
-        include
 )
 
 target_compile_options(kiso PRIVATE
