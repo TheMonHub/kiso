@@ -45,32 +45,35 @@ VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, con
         .apiVersion = CURRENT_VK_API_VERSION
       };
 
-#if !defined(NDEBUG)
-    const char *actual_extensions[extensions_count + 1];
-    memcpy((void*)actual_extensions, (const void*)extensions, extensions_count * sizeof(char*));
-    actual_extensions[extensions_count] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
-
-    log_info("Enabling Vulkan validation layers");
+#if !defined(VK_VALIDATE)
+    log_info("Checking for Vulkan validation layer support");
     static const char *validation_layers[] = {
         "VK_LAYER_KHRONOS_validation"
     };
+    uint32_t validation_layers_count = 0;
+
+    if (CheckVulkanInstanceLayerSupport(validation_layers, ARRAY_SIZE(validation_layers))) {
+        log_info("Supported validation layer");
+        validation_layers_count = ARRAY_SIZE(validation_layers);
+    } else {
+        log_info("Do not supported validation layer");
+    }
+    log_info("Enabling Vulkan validation layers");
 #endif
     const VkInstanceCreateInfo instance_create_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
         .pNext = nullptr,
         .flags = flags,
         .pApplicationInfo = &application_info,
-#if !defined(NDEBUG)
-        .enabledLayerCount = ARRAY_SIZE(validation_layers),
+#if !defined(VK_VALIDATE)
+        .enabledLayerCount = validation_layers_count,
         .ppEnabledLayerNames = validation_layers,
-        .enabledExtensionCount = extensions_count + 1,
-        .ppEnabledExtensionNames = actual_extensions
 #else
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = nullptr,
+#endif
         .enabledExtensionCount = extensions_count,
         .ppEnabledExtensionNames = extensions
-#endif
       };
 
     return vkCreateInstance(&instance_create_info, nullptr, instance);
@@ -252,9 +255,15 @@ VkResult CreateVulkanDevice(const VkPhysicalDevice physical_device, VkDevice* vk
         };
     }
 
+    VkPhysicalDeviceVulkan13Features features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .synchronization2 = VK_TRUE,
+        .dynamicRendering = VK_TRUE
+    };
+
     const VkDeviceCreateInfo device_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = nullptr,
+        .pNext = &features,
         .flags = 0,
         .queueCreateInfoCount = queue_family_count,
         .pQueueCreateInfos = queue_infos,
@@ -329,6 +338,37 @@ bool CheckVulkanPhysicalDeviceExtensionSupport(const VkPhysicalDevice device, co
     for (uint32_t i = 0; i < extensions_count; i++) {
         for (uint32_t j = 0; j < extension_count; j++) {
             if (strcmp(available_extensions[j].extensionName, extensions[i]) == 0) {
+                found_extensions_count++;
+                break;
+            }
+        }
+    }
+
+    if (found_extensions_count == extensions_count) {
+        return true;
+    }
+
+    return false;
+}
+
+bool CheckVulkanInstanceLayerSupport(const char *const *extensions, const uint32_t extensions_count) {
+    uint32_t extension_count;
+    VkResult vk_result = vkEnumerateInstanceLayerProperties(&extension_count, nullptr);
+    if (vk_result != VK_SUCCESS) {
+        return false;
+    }
+
+    VkLayerProperties available_extensions[extension_count];
+    vk_result = vkEnumerateInstanceLayerProperties(&extension_count, available_extensions);
+    if (vk_result != VK_SUCCESS) {
+        return false;
+    }
+
+    uint32_t found_extensions_count = 0;
+
+    for (uint32_t i = 0; i < extensions_count; i++) {
+        for (uint32_t j = 0; j < extension_count; j++) {
+            if (strcmp(available_extensions[j].layerName, extensions[i]) == 0) {
                 found_extensions_count++;
                 break;
             }
@@ -559,7 +599,7 @@ VkResult CreateImageViews(const VkDevice device, const VkImage *images, const ui
 }
 
 VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vertex_shader_module, const VkShaderModule fragment_shader_module,
-    const VkPipelineVertexInputStateCreateInfo *vertex_input_info, const VkExtent2D *extent, VkPipelineLayout *pipeline_layout, VkRenderPass *render_pass,
+    const VkPipelineVertexInputStateCreateInfo *vertex_input_info, const VkExtent2D *extent, VkPipelineLayout *pipeline_layout,
     VkPipeline *pipeline, VkFormat image_format, char **error_message) {
     log_debug("Instructed to create a Vulkan graphics pipeline");
     const VkPipelineShaderStageCreateInfo vertShaderStageInfo = {
@@ -694,68 +734,19 @@ VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vert
         RETURN_ERROR("Failed to create pipeline layout", vk_result);
     }
 
-    VkAttachmentDescription color_attachment = {
-        .flags = 0,
-        .format = image_format,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-    };
-
-    VkAttachmentReference color_attachment_ref = {
-        .attachment = 0,
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-    };
-
-    const VkSubpassDependency dependency = {
-        .srcSubpass = VK_SUBPASS_EXTERNAL,
-        .dstSubpass = 0,
-        .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        .srcAccessMask = 0,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-        .dependencyFlags = 0
-    };
-
-    VkSubpassDescription subpass = {
-        .flags = 0,
-        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-        .inputAttachmentCount = 0,
-        .pInputAttachments = nullptr,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &color_attachment_ref,
-        .pResolveAttachments = nullptr,
-        .pDepthStencilAttachment = nullptr,
-        .preserveAttachmentCount = 0,
-        .pPreserveAttachments = nullptr
-    };
-
-    VkRenderPassCreateInfo render_pass_info = {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+    VkPipelineRenderingCreateInfo rendering_create_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .pNext = nullptr,
-        .flags = 0,
-        .attachmentCount = 1,
-        .pAttachments = &color_attachment,
-        .subpassCount = 1,
-        .pSubpasses = &subpass,
-        .dependencyCount = 1,
-        .pDependencies = &dependency
+        .viewMask = 0,
+        .colorAttachmentCount = 1,
+        .pColorAttachmentFormats = &image_format,
+        .depthAttachmentFormat = VK_FORMAT_UNDEFINED,
+        .stencilAttachmentFormat = VK_FORMAT_UNDEFINED
     };
-
-    log_trace("Creating render pass");
-    vk_result = vkCreateRenderPass(device, &render_pass_info, nullptr, render_pass);
-    if (vk_result != VK_SUCCESS) {
-        vkDestroyPipelineLayout(device, *pipeline_layout, nullptr);
-        RETURN_ERROR("Failed to create render pass", vk_result);
-    }
 
     VkGraphicsPipelineCreateInfo pipeline_info = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext = nullptr,
+        .pNext = &rendering_create_info,
         .flags = 0,
         .stageCount = ARRAY_SIZE(shader_stages),
         .pStages = shader_stages,
@@ -769,7 +760,7 @@ VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vert
         .pColorBlendState = &color_blend_state,
         .pDynamicState = &dynamic_state,
         .layout = *pipeline_layout,
-        .renderPass = *render_pass,
+        .renderPass = nullptr,
         .subpass = 0,
         .basePipelineHandle = VK_NULL_HANDLE,
         .basePipelineIndex = -1
@@ -779,31 +770,7 @@ VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vert
     vk_result = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, pipeline);
     if (vk_result != VK_SUCCESS) {
         vkDestroyPipelineLayout(device, *pipeline_layout, nullptr);
-        vkDestroyRenderPass(device, *render_pass, nullptr);
         RETURN_ERROR("Failed to create graphics pipeline", vk_result);
-    }
-
-    return VK_SUCCESS;
-}
-
-VkResult CreateFramebuffers(const VkDevice device, VkImageView *image_views, const uint32_t image_count, const VkRenderPass render_pass, VkFramebuffer *framebuffers, const VkExtent2D *extent, char **error_message) {
-    for (uint32_t i = 0; i < image_count; ++i) {
-        const VkFramebufferCreateInfo framebuffer_info = {
-            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = 0,
-            .renderPass = render_pass,
-            .attachmentCount = 1,
-            .pAttachments = &image_views[i],
-            .width = extent->width,
-            .height = extent->height,
-            .layers = 1
-        };
-
-        const VkResult vk_result = vkCreateFramebuffer(device, &framebuffer_info, nullptr, &framebuffers[i]);
-        if (vk_result != VK_SUCCESS) {
-            RETURN_ERROR("Failed to create framebuffer", vk_result);
-        }
     }
 
     return VK_SUCCESS;
@@ -902,7 +869,6 @@ VkResult CreateSyncObjects(
 
     VkResult vk_result;
 
-    // Create frame-specific synchronization objects.
     for (uint32_t i = 0; i < command_buffer_count; i++) {
         vk_result = vkCreateSemaphore(
             device, &semaphore_info, nullptr,
@@ -925,7 +891,6 @@ VkResult CreateSyncObjects(
         fence_count++;
     }
 
-    // Create swapchain-image-specific synchronization objects.
     for (uint32_t i = 0; i < image_count; i++) {
         vk_result = vkCreateSemaphore(
             device, &semaphore_info, nullptr,

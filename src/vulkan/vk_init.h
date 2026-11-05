@@ -7,7 +7,7 @@
 #include "GLFW/glfw3.h"
 #include "vk_const.h"
 
-#define CURRENT_VK_API_VERSION VK_API_VERSION_1_1
+#define CURRENT_VK_API_VERSION VK_API_VERSION_1_3
 
 typedef struct PhysicalDeviceInformation {
     VkPhysicalDeviceProperties properties;
@@ -60,6 +60,8 @@ bool GetQueueFamilyIndexWithRequiredFlags(uint32_t queue_family_count, const VkQ
 
 bool CheckVulkanPhysicalDeviceExtensionSupport(VkPhysicalDevice device, const char *const *extensions, uint32_t extensions_count);
 
+bool CheckVulkanInstanceLayerSupport(const char *const *extensions, uint32_t extensions_count);
+
 bool CheckVulkanInstanceExtensionSupport(const char *const *extensions, uint32_t extensions_count);
 
 [[nodiscard]]
@@ -79,11 +81,8 @@ VkResult CreateImageViews(VkDevice device, const VkImage *images, uint32_t image
 
 [[nodiscard]]
 VkResult CreateGraphicsPipeline(VkDevice device, VkShaderModule vertex_shader_module, VkShaderModule fragment_shader_module,
-    const VkPipelineVertexInputStateCreateInfo *vertex_input_info, const VkExtent2D *extent, VkPipelineLayout *pipeline_layout, VkRenderPass *render_pass,
+    const VkPipelineVertexInputStateCreateInfo *vertex_input_info, const VkExtent2D *extent, VkPipelineLayout *pipeline_layout,
     VkPipeline *pipeline, VkFormat image_format, char **error_message);
-
-[[nodiscard]]
-VkResult CreateFramebuffers(VkDevice device, VkImageView *image_views, uint32_t image_count, VkRenderPass render_pass, VkFramebuffer *framebuffers, const VkExtent2D *extent, char **error_message);
 
 [[nodiscard]]
 VkResult CreateCommandPool(VkDevice device, uint32_t queue_family_index, VkCommandPool *command_pool, char **error_message);

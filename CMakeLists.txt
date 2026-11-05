@@ -5,6 +5,12 @@ project(kiso
         LANGUAGES C
 )
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    option(VK_VALIDATE "Enable Vulkan validation layers" ON)
+else()
+    option(VK_VALIDATE "Enable Vulkan validation layers" OFF)
+endif()
+
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
@@ -127,6 +133,12 @@ target_compile_definitions(kiso PRIVATE
         PROJECT_VERSION_MINOR=${CMAKE_PROJECT_VERSION_MINOR}
         PROJECT_VERSION_PATCH=${CMAKE_PROJECT_VERSION_PATCH}
 )
+
+if(VK_VALIDATE)
+    target_compile_definitions(kiso PRIVATE
+            VK_VALIDATE
+    )
+endif()
 
 if(GIT_COMMIT_HASH)
     message(STATUS "Git commit: ${GIT_COMMIT_HASH}")

@@ -299,7 +299,6 @@ int main(const int argc, char *argv[]) {
     };
 
     VkPipelineLayout pipeline_layout;
-    VkRenderPass render_pass;
     VkPipeline pipeline;
 
     log_debug("Creating graphics pipeline");
@@ -310,7 +309,6 @@ int main(const int argc, char *argv[]) {
         &vertex_input_info,
         &extent,
         &pipeline_layout,
-        &render_pass,
         &pipeline,
         surface_format->format,
         &error_str);
@@ -319,21 +317,11 @@ int main(const int argc, char *argv[]) {
         PrintAndGotoIfError(error_str, vk_result, fragshadermod_cleanup);
     }
 
-    auto framebuffers = (VkFramebuffer *) malloc(sizeof(VkFramebuffer) * image_count);
-    if (!framebuffers) {
-        PrintAndGotoIfError("Failed to allocate memory for framebuffers", 1, pipeline_cleanup);
-    }
-
-    vk_result = CreateFramebuffers(device, image_views, image_count, render_pass, framebuffers, &extent, &error_str);
-    if (vk_result != VK_SUCCESS) {
-        PrintAndGotoIfError(error_str, vk_result, pipeline_cleanup);
-    }
-
     log_debug("Creating command pool");
     VkCommandPool command_pool;
     vk_result = CreateCommandPool(device, graphic_queue_family, &command_pool, &error_str);
     if (vk_result != VK_SUCCESS) {
-        PrintAndGotoIfError(error_str, vk_result, framebuffers_cleanup);
+        PrintAndGotoIfError(error_str, vk_result, pipeline_cleanup);
     }
 
     log_debug("Creating command buffers");
@@ -344,9 +332,9 @@ int main(const int argc, char *argv[]) {
     }
 
     log_debug("Recording sync objects");
-    auto image_available_semaphores = (VkSemaphore *) malloc(sizeof(VkSemaphore));
+    auto image_available_semaphores = (VkSemaphore *) malloc(sizeof(VkSemaphore) * kMaxFramesInFlight);
     auto render_finished_semaphores = (VkSemaphore *) malloc(sizeof(VkSemaphore) * image_count);
-    auto in_flight_fence = (VkFence *) malloc(sizeof(VkFence));
+    auto in_flight_fence = (VkFence *) malloc(sizeof(VkFence) * kMaxFramesInFlight);
     vk_result = CreateSyncObjects(device, &in_flight_fence, &image_available_semaphores, &render_finished_semaphores, kMaxFramesInFlight, image_count, &error_str);
     if (vk_result != VK_SUCCESS) {
         PrintAndGotoIfError(error_str, vk_result, commandbuffersmalloc_cleanup);
@@ -368,14 +356,14 @@ int main(const int argc, char *argv[]) {
             .graphics_queue = graphics_queue,
             .swapchain = &swapchain,
             .command_buffers = command_buffers,
-            .render_pass = render_pass,
-            .framebuffers = &framebuffers,
             .pipeline = pipeline,
             .in_flight_fences = in_flight_fence,
             .image_available_semaphores = image_available_semaphores,
             .render_finished_semaphores = render_finished_semaphores,
             .extent = &extent,
-            .current_frame = &current_frame
+            .current_frame = &current_frame,
+            .image_views = &image_views,
+            .is_framebuffer_resized = &is_framebuffer_resized
         };
 
         SwapchainRecreationInfo swapchain_recreation_info = {
@@ -388,20 +376,19 @@ int main(const int argc, char *argv[]) {
             .composite_alpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
             .image_count = image_count,
             .images = &images,
-            .image_views = &image_views,
             .window = window
         };
 
+        vk_result = DrawFrame(&render_context, &swapchain_recreation_info, VK_ATTACHMENT_LOAD_OP_CLEAR, &error_str);
+        if (vk_result != VK_SUCCESS) {
+            PrintAndGotoIfError(error_str, vk_result, syncobjects_cleanup);
+        }
         if (is_framebuffer_resized) {
             is_framebuffer_resized = false;
             vk_result = RecreateSwapchain(&render_context, &swapchain_recreation_info, &error_str);
             if (vk_result != VK_SUCCESS) {
                 PrintAndGotoIfError(error_str, vk_result, syncobjects_cleanup);
             }
-        }
-        vk_result = DrawFrame(&render_context, &swapchain_recreation_info, &error_str);
-        if (vk_result != VK_SUCCESS) {
-            PrintAndGotoIfError(error_str, vk_result, syncobjects_cleanup);
         }
     }
 
@@ -421,13 +408,8 @@ int main(const int argc, char *argv[]) {
     free((void *) command_buffers);
     commandpool_cleanup:
     vkDestroyCommandPool(device, command_pool, nullptr);
-    framebuffers_cleanup:
-    CleanupFramebuffers(device, framebuffers, image_count);
-    framebuffersmalloc_cleanup:
-    free((void *) framebuffers);
     pipeline_cleanup:
     vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
-    vkDestroyRenderPass(device, render_pass, nullptr);
     vkDestroyPipeline(device, pipeline, nullptr);
     fragshadermod_cleanup:
     vkDestroyShaderModule(device, fragment_shader_module, nullptr);

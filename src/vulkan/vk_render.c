@@ -9,7 +9,7 @@
 #include "vk_init.h"
 
 [[nodiscard]]
-VkResult RecordCommandBuffer(const VkCommandBuffer command_buffer, const VkRenderPass render_pass, const VkFramebuffer framebuffers,
+VkResult RecordCommandBuffer(const VkCommandBuffer command_buffer, const VkImageView image_view, const VkAttachmentLoadOp load_op,
                              const VkPipeline pipeline, const VkExtent2D extent, char **error_message) {
 
     const VkCommandBufferBeginInfo begin_info = {
@@ -24,20 +24,36 @@ VkResult RecordCommandBuffer(const VkCommandBuffer command_buffer, const VkRende
         RETURN_ERROR("Failed to begin recording command buffer", result);
     }
 
-    const VkRenderPassBeginInfo render_pass_info = {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+    VkRenderingAttachmentInfo color_attachment = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
         .pNext = nullptr,
-        .renderPass = render_pass,
-        .framebuffer = framebuffers,
+        .imageView = image_view,
+        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .resolveMode = VK_RESOLVE_MODE_NONE,
+        .resolveImageView = nullptr,
+        .resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .loadOp = load_op,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue = (VkClearValue){.color.float32 = {0.0f, 0.0f, 0.0f, 1.0f}}
+    };
+
+    const VkRenderingInfo rendering_info = {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+        .pNext = nullptr,
+        .flags = 0,
         .renderArea = {
             .offset = {.x = 0, .y = 0},
             .extent = extent
         },
-        .clearValueCount = 1,
-        .pClearValues = &(VkClearValue){.color.float32 = {0.0f, 0.0f, 0.0f, 1.0f}}
+        .layerCount = 1,
+        .viewMask = 0,
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &color_attachment,
+        .pDepthAttachment = nullptr,
+        .pStencilAttachment = nullptr
     };
 
-    vkCmdBeginRenderPass(command_buffer, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRendering(command_buffer, &rendering_info);
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
     const VkViewport viewport = {
@@ -57,7 +73,7 @@ VkResult RecordCommandBuffer(const VkCommandBuffer command_buffer, const VkRende
     vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
     vkCmdDraw(command_buffer, 3, 1, 0, 0);
-    vkCmdEndRenderPass(command_buffer);
+    vkCmdEndRendering(command_buffer);
 
     result = vkEndCommandBuffer(command_buffer);
     if (result != VK_SUCCESS) {
@@ -80,8 +96,7 @@ VkResult RecreateSwapchain(const RenderContext *render_context, const SwapchainR
     vkDeviceWaitIdle(render_context->device);
 
     vkDestroySwapchainKHR(render_context->device, *render_context->swapchain, nullptr);
-    CleanupImageViews(render_context->device, *info->image_views, info->image_count);
-    CleanupFramebuffers(render_context->device, *render_context->framebuffers, info->image_count);
+    CleanupImageViews(render_context->device, *render_context->image_views, info->image_count);
 
     const VkExtent2D extent_temp = ChooseVulkanExtent(&info->swapchain_support->capabilities, width, height);
     render_context->extent->width = extent_temp.width;
@@ -107,20 +122,15 @@ VkResult RecreateSwapchain(const RenderContext *render_context, const SwapchainR
         RETURN_ERROR("Failed to recreate swapchain", vk_result);
     }
 
-    vk_result = CreateImageViews(render_context->device, *info->images, new_image_count, *info->image_views, info->surface_format->format, error_message);
+    vk_result = CreateImageViews(render_context->device, *info->images, new_image_count, *render_context->image_views, info->surface_format->format, error_message);
     if (vk_result != VK_SUCCESS) {
         RETURN_ERROR("Failed to create image views for new swapchain", vk_result);
-    }
-
-    vk_result = CreateFramebuffers(render_context->device, *info->image_views, new_image_count, render_context->render_pass, *render_context->framebuffers, render_context->extent, error_message);
-    if (vk_result != VK_SUCCESS) {
-        RETURN_ERROR("Failed to create framebuffers for new swapchain", vk_result);
     }
 
     return VK_SUCCESS;
 }
 
-VkResult DrawFrame(const RenderContext *render_context, const SwapchainRecreationInfo *swapchain_recreation_info, char **error_message) {
+VkResult DrawFrame(const RenderContext *render_context, const SwapchainRecreationInfo *swapchain_recreation_info, const VkAttachmentLoadOp load_op, char **error_message) {
     VkResult vk_result = vkWaitForFences(render_context->device, 1, &render_context->in_flight_fences[*render_context->current_frame], VK_TRUE, UINT64_MAX);
     if (vk_result != VK_SUCCESS) {
         RETURN_ERROR("Failed to wait for in-flight fence", vk_result);
@@ -129,13 +139,8 @@ VkResult DrawFrame(const RenderContext *render_context, const SwapchainRecreatio
     uint32_t image_index;
     vk_result = vkAcquireNextImageKHR(render_context->device, *render_context->swapchain, UINT64_MAX, render_context->image_available_semaphores[*render_context->current_frame], VK_NULL_HANDLE, &image_index);
     if (vk_result == VK_ERROR_OUT_OF_DATE_KHR || vk_result == VK_SUBOPTIMAL_KHR) {
-        log_trace("Swapchain is out of date");
-        char *error_result = nullptr;
-        vk_result = RecreateSwapchain(render_context, swapchain_recreation_info, &error_result);
-        if (vk_result != VK_SUCCESS) {
-            log_error("Failed to recreate swapchain after out-of-date or suboptimal error");
-            RETURN_ERROR(error_result, vk_result);
-        }
+        log_trace("Swapchain is out of date or suboptimal");
+        *render_context->is_framebuffer_resized = true;
     }
     if (vk_result != VK_SUCCESS) {
         RETURN_ERROR("Failed to acquire swapchain image", vk_result);
@@ -147,26 +152,51 @@ VkResult DrawFrame(const RenderContext *render_context, const SwapchainRecreatio
     }
 
     vkResetCommandBuffer(render_context->command_buffers[*render_context->current_frame], 0);
-    vk_result = RecordCommandBuffer(render_context->command_buffers[*render_context->current_frame], render_context->render_pass, (*render_context->framebuffers)[image_index], render_context->pipeline, *render_context->extent, error_message);
+    vk_result = RecordCommandBuffer(render_context->command_buffers[*render_context->current_frame], (*render_context->image_views)[image_index], load_op, render_context->pipeline, *render_context->extent, error_message);
     if (vk_result != VK_SUCCESS) {
         RETURN_ERROR("Failed to record command buffer", vk_result);
     }
 
     VkSemaphore signal_semaphores[] = {render_context->render_finished_semaphores[image_index]};
 
-    const VkSubmitInfo submit_info = {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    const VkSemaphoreSubmitInfo wait_semaphore_info = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
         .pNext = nullptr,
-        .waitSemaphoreCount = 1,
-        .pWaitSemaphores = (VkSemaphore[]){render_context->image_available_semaphores[*render_context->current_frame]},
-        .pWaitDstStageMask = (VkPipelineStageFlags[]){VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT},
-        .commandBufferCount = 1,
-        .pCommandBuffers = &render_context->command_buffers[*render_context->current_frame],
-        .signalSemaphoreCount = 1,
-        .pSignalSemaphores = signal_semaphores
+        .semaphore = render_context->image_available_semaphores[*render_context->current_frame],
+        .value = 0,
+        .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        .deviceIndex = 0
     };
 
-    vk_result = vkQueueSubmit(render_context->graphics_queue, 1, &submit_info, render_context->in_flight_fences[*render_context->current_frame]);
+    const VkCommandBufferSubmitInfo command_buffer_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .pNext = nullptr,
+        .commandBuffer = render_context->command_buffers[*render_context->current_frame],
+        .deviceMask = 0
+    };
+
+    const VkSemaphoreSubmitInfo signal_semaphore_info = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+        .pNext = nullptr,
+        .semaphore = render_context->render_finished_semaphores[image_index],
+        .value = 0,
+        .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        .deviceIndex = 0
+    };
+
+    const VkSubmitInfo2 submit_info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .pNext = nullptr,
+        .flags = 0,
+        .waitSemaphoreInfoCount = 1,
+        .pWaitSemaphoreInfos = &wait_semaphore_info,
+        .commandBufferInfoCount = 1,
+        .pCommandBufferInfos = &command_buffer_info,
+        .signalSemaphoreInfoCount = 1,
+        .pSignalSemaphoreInfos = &signal_semaphore_info
+    };
+
+    vk_result = vkQueueSubmit2(render_context->graphics_queue, 1, &submit_info, render_context->in_flight_fences[*render_context->current_frame]);
     if (vk_result != VK_SUCCESS) {
         RETURN_ERROR("Failed to submit draw command buffer", vk_result);
     }
@@ -185,13 +215,8 @@ VkResult DrawFrame(const RenderContext *render_context, const SwapchainRecreatio
     vk_result = vkQueuePresentKHR(render_context->graphics_queue, &present_info);
 
     if (vk_result == VK_ERROR_OUT_OF_DATE_KHR || vk_result == VK_SUBOPTIMAL_KHR) {
-        log_trace("Swapchain is out of date");
-        char *error_result = nullptr;
-        vk_result = RecreateSwapchain(render_context, swapchain_recreation_info, &error_result);
-        if (vk_result != VK_SUCCESS) {
-            log_error("Failed to recreate swapchain after out-of-date or suboptimal error");
-            RETURN_ERROR(error_result, vk_result);
-        }
+        log_trace("Swapchain is out of date or suboptimal");
+        *render_context->is_framebuffer_resized = true;
     }
     if (vk_result != VK_SUCCESS) {
         RETURN_ERROR("Failed to present swapchain image", vk_result);

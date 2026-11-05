@@ -9,14 +9,14 @@ typedef struct RenderContext {
     const VkQueue graphics_queue;
     VkSwapchainKHR *swapchain;
     const VkCommandBuffer *command_buffers;
-    const VkRenderPass render_pass;
-    VkFramebuffer **framebuffers;
     const VkPipeline pipeline;
     VkExtent2D *extent;
     const VkFence *in_flight_fences;
     const VkSemaphore *image_available_semaphores;
     const VkSemaphore *render_finished_semaphores;
     uint32_t *current_frame;
+    VkImageView **image_views;
+    bool *is_framebuffer_resized;
 } RenderContext;
 
 typedef struct SwapchainRecreationInfo {
@@ -29,18 +29,17 @@ typedef struct SwapchainRecreationInfo {
     const VkCompositeAlphaFlagBitsKHR composite_alpha;
     const uint32_t image_count;
     VkImage **images;
-    VkImageView **image_views;
     GLFWwindow *window;
 } SwapchainRecreationInfo;
 
 [[nodiscard]]
-VkResult RecordCommandBuffer(VkCommandBuffer command_buffer, VkRenderPass render_pass, VkFramebuffer framebuffers,
+VkResult RecordCommandBuffer(VkCommandBuffer command_buffer, VkImageView image_view, VkAttachmentLoadOp load_op,
                              VkPipeline pipeline, VkExtent2D extent, char **error_message);
 
 [[nodiscard]]
 VkResult RecreateSwapchain(const RenderContext *render_context, const SwapchainRecreationInfo *info, char **error_message);
 
 [[nodiscard]]
-VkResult DrawFrame(const RenderContext *render_context, const SwapchainRecreationInfo *swapchain_recreation_info, char **error_message);
+VkResult DrawFrame(const RenderContext *render_context, const SwapchainRecreationInfo *swapchain_recreation_info, VkAttachmentLoadOp load_op, char **error_message);
 
 #endif // VK_RENDER_H
