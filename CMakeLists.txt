@@ -5,12 +5,6 @@ project(Kiso
         LANGUAGES C
 )
 
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    option(VK_VALIDATE "Enable Vulkan validation layers" ON)
-else ()
-    option(VK_VALIDATE "Enable Vulkan validation layers" OFF)
-endif ()
-
 find_program(CLANG_TIDY_EXE NAMES clang-tidy)
 if (CLANG_TIDY_EXE)
     option(RUN_CLANG_TIDY "Run clang-tidy linter" ON)

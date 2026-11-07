@@ -1,3 +1,9 @@
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    option(VK_VALIDATE "Enable Vulkan validation layers" ON)
+else ()
+    option(VK_VALIDATE "Enable Vulkan validation layers" OFF)
+endif ()
+
 find_package(Vulkan COMPONENTS REQUIRED)
 
 add_library(KisoVulkan STATIC
