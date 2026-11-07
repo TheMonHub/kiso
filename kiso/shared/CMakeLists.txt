@@ -26,8 +26,8 @@ target_link_libraries(KisoShared PUBLIC
 )
 
 target_compile_options(KisoShared PUBLIC
-        "-fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/="
-        "-fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/src/="
+        "-fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/src="
+        "-fmacro-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}/include="
 )
 
 target_compile_definitions(KisoShared PUBLIC
