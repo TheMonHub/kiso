@@ -40,7 +40,7 @@ typedef struct VulkanWindowData {
     GlfwCallbackStruct glfw_callback_struct;
 } VulkanWindowData;
 
-typedef struct BackendData {
+typedef struct VulkanBackendData {
     VkInstance instance;
     VkPhysicalDevice *physical_devices;
     uint32_t physical_device_count;
