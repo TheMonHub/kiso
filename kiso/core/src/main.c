@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "../../shared/include/kiso/error.h"
+#include "kiso/error.h"
 #include "logger.h"
 #include "kiso/version.h"
 #include "kiso/common.h"
