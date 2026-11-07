@@ -88,18 +88,10 @@ int main(const int argc, char *argv[]) {
         PrintSetAndGoto("Cannot create a window", graphics_api_status, error_goto);
     }
 
-    GLFWwindow *window_two;
-    WindowData window_data_two;
-    graphics_api_status = graphics_api.CreateWindow(&graphics_api, &window_two, &window_create_info, &window_data_two);
-    if (graphics_api_status != 0) {
-        PrintSetAndGoto("Cannot create a window", graphics_api_status, error_goto);
-    }
-
     while (!glfwWindowShouldClose(window)) {
         // Uhhhh for simplicity. Typically we need two thread to run this (I think)
         glfwPollEvents();
         graphics_api.DrawTestTriangle(&graphics_api, window_data);
-        graphics_api.DrawTestTriangle(&graphics_api, window_data_two);
     }
 
 error_goto:
