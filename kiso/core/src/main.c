@@ -41,7 +41,7 @@ int main(const int argc, char *argv[]) {
 #else
     log_set_level(DEFAULT, LOG_DEBUG);
 
-    for (int i = 0; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--trace") == 0) {
             log_set_level(DEFAULT, LOG_TRACE);
             break;
@@ -89,12 +89,12 @@ int main(const int argc, char *argv[]) {
     }
 
     while (!glfwWindowShouldClose(window)) {
-        // Uhhhh for simplicity. Typically we need two thread to run this (I think)
         glfwPollEvents();
         graphics_api.DrawTestTriangle(&graphics_api, window_data);
     }
 
 error_goto:
     graphics_api.Fini(&graphics_api);
+    glfwTerminate();
     return _current_error_status;
 }
