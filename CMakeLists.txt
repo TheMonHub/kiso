@@ -20,7 +20,7 @@ if (RUN_CLANG_TIDY)
     set(CMAKE_C_CLANG_TIDY
             clang-tidy
             "--format-style=file"
-            "--header-filter=${PROJECT_SOURCE_DIR}/src/.*"
+            "--header-filter=.*/kiso/.*"
 
             "
             --checks=
@@ -33,7 +33,7 @@ if (RUN_CLANG_TIDY)
             -clang-diagnostic-unknown-attributes,
             -bugprone-easily-swappable-parameters,
             -bugprone-signed-bitwise
-    "
+            "
 
             "--warnings-as-errors=*"
     )
@@ -41,9 +41,6 @@ else ()
     set(CMAKE_C_CLANG_TIDY "")
 endif ()
 
-find_package(Vulkan COMPONENTS REQUIRED)
-
-find_package(glfw3 REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 # --------------------------------------------------
@@ -79,6 +76,6 @@ add_subdirectory(logger)
 # KISO
 # --------------------------------------------------
 
-add_subdirectory(shared)
-add_subdirectory(graphics/vulkan)
-add_subdirectory(core)
+add_subdirectory(kiso/shared)
+add_subdirectory(kiso/graphics/vulkan)
+add_subdirectory(kiso/core)
