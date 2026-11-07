@@ -246,6 +246,9 @@ static uint32_t CreateWindow(GraphicsApi *api, GLFWwindow **window, WindowCreate
     BackendData *data = api->backend_data;
 
     VulkanWindowData *prep_window_data = malloc(sizeof(VulkanWindowData));
+    if (prep_window_data == nullptr) {
+        PrintAndReturn("Failed to allocated for window data", 1);
+    }
     memset(prep_window_data, 0, sizeof(VulkanWindowData));
     *window_data = prep_window_data;
 
