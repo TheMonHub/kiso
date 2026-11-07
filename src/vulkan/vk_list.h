@@ -42,7 +42,6 @@ typedef void (*VulkanShaderModuleCallback)(VulkanShaderModule *module, void *use
 constexpr uint32_t kVulkanPipelineListAllocationChunkSize = 64;
 constexpr uint32_t kVulkanShaderModuleListAllocationChunkSize = 32;
 
-
 static VulkanPipeline *VulkanPipelineListGet(const VulkanPipelineList *list, uint32_t index) {
     while (list) {
         if (index < list->count) {

@@ -125,7 +125,6 @@ VkResult RecordCommandBuffer(VkCommandBuffer command_buffer, VkImage image, VkIm
 }
 
 VkResult RecreateSwapchain(const RenderContext *render_context, const SwapchainRecreationInfo *info, char **error_message) {
-    log_trace("Instructed to recreate swapchain");
     int width = 0, height = 0;
     glfwGetFramebufferSize(info->window, &width, &height);
     while (width == 0 || height == 0) {

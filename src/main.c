@@ -3,7 +3,6 @@
 #include "error.h"
 #include "logger.h"
 #include "version.h"
-#include "glfw/glfw_callbacks.h"
 #include "util/common.h"
 #include "vulkan/vk_api.h"
 
@@ -70,8 +69,6 @@ int main(const int argc, char *argv[]) {
     if (graphics_api_status != 0) {
         PrintSetAndGoto("Cannot initialize graphics api", graphics_api_status, error_goto);
     }
-    WindowData window_data;
-    GLFWwindow *window;
 
     WindowCreateInfo window_create_info = {
         .width = desired_window_width,
@@ -81,14 +78,24 @@ int main(const int argc, char *argv[]) {
         .glfw_callback_usr_ptr = nullptr
     };
 
+    WindowData window_data;
+    GLFWwindow *window;
     graphics_api_status = graphics_api.CreateWindow(&graphics_api, &window, &window_create_info, &window_data);
     if (graphics_api_status != 0) {
         PrintSetAndGoto("Cannot create a window", graphics_api_status, error_goto);
     }
 
-    while (!glfwWindowShouldClose(window)) {
+    GLFWwindow *window_two;
+    WindowData window_data_two;
+    graphics_api_status = graphics_api.CreateWindow(&graphics_api, &window_two, &window_create_info, &window_data_two);
+    if (graphics_api_status != 0) {
+        PrintSetAndGoto("Cannot create a window", graphics_api_status, error_goto);
+    }
+
+    while (!glfwWindowShouldClose(window)) { // Uhhhh for simplicity. Typically we need two thread to run this (I think)
         glfwPollEvents();
         graphics_api.DrawTestTriangle(&graphics_api, window_data);
+        graphics_api.DrawTestTriangle(&graphics_api, window_data_two);
     }
 
     error_goto:
