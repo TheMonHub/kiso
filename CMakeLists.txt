@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 4.4)
 project(Kiso
         VERSION 1.0.0
+        DESCRIPTION "A desktop framework you can use to make all sorts of software in lua, from games to tools."
         HOMEPAGE_URL https://github.com/TheMonHub/kiso
         LANGUAGES C
 )
