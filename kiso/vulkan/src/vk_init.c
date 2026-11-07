@@ -122,7 +122,7 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
                   VK_VERSION_PATCH(device_properties->apiVersion));
 
         if (device_properties->deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-            device_information->score += 50;
+            device_information->score += 250;
         }
 
         static const char *const swapchain_extensions[] = {
