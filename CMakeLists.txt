@@ -5,30 +5,30 @@ project(kiso
         LANGUAGES C
 )
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     option(VK_VALIDATE "Enable Vulkan validation layers" ON)
-else()
+else ()
     option(VK_VALIDATE "Enable Vulkan validation layers" OFF)
-endif()
+endif ()
 
 find_program(CLANG_TIDY_EXE NAMES clang-tidy)
-if(CLANG_TIDY_EXE)
+if (CLANG_TIDY_EXE)
     option(RUN_CLANG_TIDY "Run clang-tidy linter" ON)
-else()
+else ()
     option(RUN_CLANG_TIDY "Run clang-tidy linter" OFF)
-endif()
+endif ()
 
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-if(RUN_CLANG_TIDY)
+if (RUN_CLANG_TIDY)
     set(CMAKE_C_CLANG_TIDY
             clang-tidy
             "--format-style=file"
             "--header-filter=${PROJECT_SOURCE_DIR}/src/.*"
 
-    "
+            "
             --checks=
             bugprone-*,
             performance-*,
@@ -43,9 +43,9 @@ if(RUN_CLANG_TIDY)
 
             "--warnings-as-errors=*"
     )
-else()
+else ()
     set(CMAKE_C_CLANG_TIDY "")
-endif()
+endif ()
 
 find_package(Vulkan COMPONENTS REQUIRED)
 
@@ -54,13 +54,15 @@ find_package(PkgConfig REQUIRED)
 # pkg_check_modules(cglm REQUIRED IMPORTED_TARGET cglm)
 # pkg_check_modules(tinyobjloader REQUIRED IMPORTED_TARGET tinyobjloader)
 
+pkg_check_modules(LuaJIT REQUIRED IMPORTED_TARGET luajit)
+
 # --------------------------------------------------
 # Get git commit hash and branch
 # --------------------------------------------------
 
 find_package(Git QUIET)
 
-if(GIT_FOUND)
+if (GIT_FOUND)
     execute_process(
             COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -75,7 +77,7 @@ if(GIT_FOUND)
             OUTPUT_STRIP_TRAILING_WHITESPACE
             ERROR_QUIET
     )
-endif()
+endif ()
 
 # --------------------------------------------------
 # Logger Library https://github.com/JeepWay/logger-c
@@ -130,6 +132,7 @@ target_link_libraries(kiso
         Vulkan::Vulkan
         glfw
         logger-c
+        PkgConfig::LuaJIT
 )
 
 target_include_directories(kiso PRIVATE
@@ -149,29 +152,29 @@ target_compile_definitions(kiso PRIVATE
         PROJECT_VERSION_PATCH=${CMAKE_PROJECT_VERSION_PATCH}
 )
 
-if(VK_VALIDATE)
+if (VK_VALIDATE)
     target_compile_definitions(kiso PRIVATE
             VK_VALIDATE
     )
-endif()
+endif ()
 
-if(GIT_COMMIT_HASH)
+if (GIT_COMMIT_HASH)
     message(STATUS "Git commit: ${GIT_COMMIT_HASH}")
     target_compile_definitions(kiso PRIVATE
             PROJECT_GIT_COMMIT_HASH="${GIT_COMMIT_HASH}"
     )
-else()
+else ()
     message(WARNING "Could not get git commit hash")
-endif()
+endif ()
 
-if(GIT_BRANCH)
+if (GIT_BRANCH)
     message(STATUS "Git branch: ${GIT_BRANCH}")
     target_compile_definitions(kiso PRIVATE
             PROJECT_GIT_BRANCH="${GIT_BRANCH}"
     )
-else()
+else ()
     message(WARNING "Could not get git branch")
-endif()
+endif ()
 
 # --------------------------------------------------
 # Compile Shaders
@@ -182,7 +185,7 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES
         "shader/*.vert"
 )
 
-foreach(GLSL ${GLSL_SOURCE_FILES})
+foreach (GLSL ${GLSL_SOURCE_FILES})
     get_filename_component(FILE_NAME ${GLSL} NAME)
     set(SPIRV "${PROJECT_BINARY_DIR}/shader/${FILE_NAME}.spv")
     add_custom_command(
@@ -191,7 +194,7 @@ foreach(GLSL ${GLSL_SOURCE_FILES})
             COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V ${GLSL} -o ${SPIRV}
             DEPENDS ${GLSL})
     list(APPEND SPIRV_BINARY_FILES ${SPIRV})
-endforeach(GLSL)
+endforeach (GLSL)
 
 add_custom_target(
         Shaders

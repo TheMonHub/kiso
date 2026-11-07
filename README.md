@@ -23,6 +23,7 @@ To build KISO, you will need the following installed in your system:
 - Git
 - CMake (v4.4 minimum)
 - GCC (supports C23 and other new features)
+- LuaJIT (2.1)
 
 You can then directly run the build commands through CMake.
 

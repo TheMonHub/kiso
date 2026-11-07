@@ -15,9 +15,5 @@ under the MIT license.
 This software uses the LuaJIT scripting language
 (https://luajit.org/), which is distributed under the MIT license.
 
-This software uses luajit-cmake
-(https://github.com/zhaozg/luajit-cmake/) as part of its
-build system. luajit-cmake is distributed under the MIT license.
-
 MIT license: https://opensource.org/license/mit
 zlib license: https://opensource.org/license/zlib
