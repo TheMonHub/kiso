@@ -9,7 +9,6 @@ void ConvertQueueFamilyProperties(const VkQueueFamilyProperties *properties, con
     for (uint32_t i = 0; i < count; i++) {
         output[i].index = i;
         output[i].queue_flags = properties[i].queueFlags;
-        // NOLINTBEGIN(bugprone-signed-bitwise)
         output[i].graphics_bit = properties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
         output[i].compute_bit = properties[i].queueFlags & VK_QUEUE_COMPUTE_BIT;
         output[i].transfer_bit = properties[i].queueFlags & VK_QUEUE_TRANSFER_BIT;
@@ -19,13 +18,11 @@ void ConvertQueueFamilyProperties(const VkQueueFamilyProperties *properties, con
         output[i].video_encode_bit = properties[i].queueFlags & VK_QUEUE_VIDEO_ENCODE_BIT_KHR;
         output[i].optical_flow_bit = properties[i].queueFlags & VK_QUEUE_OPTICAL_FLOW_BIT_NV;
         output[i].data_graph_bit = properties[i].queueFlags & VK_QUEUE_DATA_GRAPH_BIT_ARM;
-        // NOLINTEND(bugprone-signed-bitwise)
     }
 }
 
 void ConvertQueueFlags(const VkQueueFlags flags, QueueFamilyInfo *output) {
     output->queue_flags = flags;
-    // NOLINTBEGIN(bugprone-signed-bitwise)
     output->graphics_bit = flags & VK_QUEUE_GRAPHICS_BIT;
     output->compute_bit = flags & VK_QUEUE_COMPUTE_BIT;
     output->transfer_bit = flags & VK_QUEUE_TRANSFER_BIT;
@@ -35,5 +32,4 @@ void ConvertQueueFlags(const VkQueueFlags flags, QueueFamilyInfo *output) {
     output->video_encode_bit = flags & VK_QUEUE_VIDEO_ENCODE_BIT_KHR;
     output->optical_flow_bit = flags & VK_QUEUE_OPTICAL_FLOW_BIT_NV;
     output->data_graph_bit = flags & VK_QUEUE_DATA_GRAPH_BIT_ARM;
-    // NOLINTEND(bugprone-signed-bitwise)
 }
