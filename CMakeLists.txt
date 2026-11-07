@@ -11,31 +11,41 @@ else()
     option(VK_VALIDATE "Enable Vulkan validation layers" OFF)
 endif()
 
+find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+if(CLANG_TIDY_EXE)
+    option(RUN_CLANG_TIDY "Run clang-tidy linter" ON)
+else()
+    option(RUN_CLANG_TIDY "Run clang-tidy linter" OFF)
+endif()
+
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
-set(CMAKE_C_CLANG_TIDY
-        clang-tidy
-        "--format-style=file"
-        "--header-filter=${PROJECT_SOURCE_DIR}/src/.*"
+if(RUN_CLANG_TIDY)
+    set(CMAKE_C_CLANG_TIDY
+            clang-tidy
+            "--format-style=file"
+            "--header-filter=${PROJECT_SOURCE_DIR}/src/.*"
 
-"
-        --checks=
-        bugprone-*,
-        performance-*,
-        clang-analyzer-*,
-        cert-*,
-        modernize-use-nodiscard,
-        -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
-        -clang-diagnostic-unknown-attributes,
-        -bugprone-easily-swappable-parameters,
-        -bugprone-signed-bitwise
-"
+    "
+            --checks=
+            bugprone-*,
+            performance-*,
+            clang-analyzer-*,
+            cert-*,
+            modernize-use-nodiscard,
+            -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
+            -clang-diagnostic-unknown-attributes,
+            -bugprone-easily-swappable-parameters,
+            -bugprone-signed-bitwise
+    "
 
-        "--warnings-as-errors=*"
-)
-
+            "--warnings-as-errors=*"
+    )
+else()
+    set(CMAKE_C_CLANG_TIDY "")
+endif()
 
 find_package(Vulkan COMPONENTS REQUIRED)
 
