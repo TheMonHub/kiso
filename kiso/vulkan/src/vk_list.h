@@ -53,10 +53,10 @@ static VulkanPipeline *VulkanPipelineListGet(const VulkanPipelineList *list, uin
 
 static bool VulkanPipelineListNew(VulkanPipelineList **list) {
     *list = malloc(sizeof(VulkanPipelineList));
-    memset(*list, 0, sizeof(VulkanPipelineList));
     if (*list == nullptr) {
         return false;
     }
+    memset(*list, 0, sizeof(VulkanPipelineList));
     (*list)->pipelines = malloc(kVulkanPipelineListAllocationChunkSize * sizeof(VulkanPipeline));
     if ((*list)->pipelines == nullptr) {
         free(*list);
@@ -144,10 +144,10 @@ static VulkanShaderModule *VulkanShaderModuleListGet(const VulkanShaderModuleLis
 
 static bool VulkanShaderModuleListNew(VulkanShaderModuleList **list) {
     *list = malloc(sizeof(VulkanShaderModuleList));
-    memset(*list, 0, sizeof(VulkanShaderModuleList));
     if (*list == nullptr) {
         return false;
     }
+    memset(*list, 0, sizeof(VulkanShaderModuleList));
     (*list)->shader_modules = malloc(kVulkanShaderModuleListAllocationChunkSize * sizeof(VulkanShaderModule));
     if ((*list)->shader_modules == nullptr) {
         free(*list);
