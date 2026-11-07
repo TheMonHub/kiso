@@ -3,17 +3,18 @@
 
 #include "vk_init.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include <GLFW/glfw3.h>
-#include "util/common.h"
-#include "version.h"
+#include "kiso/common.h"
+#include "kiso/version.h"
 
 #include "error.h"
 #include "logger.h"
 #include "vk_convert.h"
-#include "util/enum_to_str.h"
-#include "util/math.h"
+#include "enum_to_str.h"
+#include "kiso/math.h"
 #include "vk_helper.h"
 
 static constexpr uint64_t kMaxDeviceSizeScore = 1280;

@@ -23,7 +23,7 @@
 // Check handler struct definition, its initialization, allowed_members, log_set_max_level,
 // log_add_handler, log_add_stream_handler, log_add_file_handler, and _log_message. Added max level - TheMonHub
 
-#include "logger.h"
+#include "include/logger.h"
 
 #include <assert.h>
 #include <string.h>

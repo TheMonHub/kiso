@@ -13,8 +13,6 @@ void CleanupSwapchainSupportDetails(const SwapchainSupportDetails *swapchain_sup
 
 void CleanupImageViews(VkDevice device, const VkImageView *image_views, uint32_t image_count);
 
-void CleanupImages(VkDevice device, const VkImage *images, uint32_t image_count);
-
 void CleanupFramebuffers(VkDevice device, const VkFramebuffer *framebuffers, uint32_t framebuffer_count);
 
 void CleanupSemaphores(VkDevice device, const VkSemaphore *semaphores, uint32_t semaphore_count);

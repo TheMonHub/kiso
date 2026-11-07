@@ -2,18 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // ReSharper disable CppParameterMayBeConstPtrOrRef
-#include "vk_api.h"
+#include "kiso/vk_api.h"
+
+#include <stdlib.h>
 
 #include "vk_init.h"
 #include <string.h>
 #include <GLFW/glfw3.h>
 
-#include "error.h"
+#include "logger.h"
 #include "vk_shader.h"
-#include "util/common.h"
+#include "kiso/common.h"
 #include "vk_list.h"
 #include "vk_render.h"
-#include "glfw/glfw_callbacks.h"
+#include "kiso/glfw/glfw_callbacks.h"
+#include "kiso/error.h"
 
 GLFWAPI VkResult glfwCreateWindowSurface(VkInstance instance, GLFWwindow *window, const VkAllocationCallbacks *allocator, VkSurfaceKHR *surface);
 
@@ -173,11 +176,9 @@ static uint32_t Init(GraphicsApi *api) {
 
     constexpr unsigned char vertex_shader_code[] = {
 #embed "shader.vert.spv"
-
     };
     constexpr unsigned char fragment_shader_code[] = {
 #embed "shader.frag.spv"
-
     };
     constexpr size_t vertex_shader_code_size = sizeof(vertex_shader_code);
     constexpr size_t fragment_shader_code_size = sizeof(fragment_shader_code);

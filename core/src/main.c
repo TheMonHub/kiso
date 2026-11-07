@@ -3,11 +3,11 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "error.h"
+#include "../../shared/include/kiso/error.h"
 #include "logger.h"
-#include "version.h"
-#include "util/common.h"
-#include "vulkan/vk_api.h"
+#include "kiso/version.h"
+#include "kiso/common.h"
+#include "kiso/vk_api.h"
 
 static void PrintProjectInfo() {
     log_info("========== KISO ===========");

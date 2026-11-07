@@ -20,13 +20,6 @@ void CleanupImageViews(const VkDevice device, const VkImageView *image_views, co
         vkDestroyImageView(device, image_views[i], nullptr);
     }
 }
-
-void CleanupImages(const VkDevice device, const VkImage *images, const uint32_t image_count) {
-    for (uint32_t i = 0; i < image_count; ++i) {
-        vkDestroyImage(device, images[i], nullptr);
-    }
-}
-
 void CleanupFramebuffers(const VkDevice device, const VkFramebuffer *framebuffers, const uint32_t framebuffer_count) {
     for (uint32_t i = 0; i < framebuffer_count; ++i) {
         vkDestroyFramebuffer(device, framebuffers[i], nullptr);

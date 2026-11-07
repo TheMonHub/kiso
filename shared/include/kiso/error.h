@@ -6,14 +6,6 @@
 
 #include "logger.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-
-#if defined(_WIN32)
-#include <windows.h>
-#include <winuser.h>
-#endif
-
 #define ExitOnError(msg, code) InternalExitOnError(msg, code, __FILE__, __LINE__)
 
 #define PrintSetAndGoto(msg, code, label) \

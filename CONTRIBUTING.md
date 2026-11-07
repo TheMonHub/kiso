@@ -9,17 +9,17 @@ Let's get started on it, assuming you know what you're doing.
 Naming Convention
 -----------------
 
-| Type                | Convention                 |
-|---------------------|----------------------------|
-| File name           | snake_case                 |
-| Local variable      | snake_case                 |
-| Function argument   | snake_case                 |
-| Function name       | PascalCase                 |
-| Constexpr variable  | PascalCase with "k" prefix |
-| Enum entry          | PascalCase with "k" prefix |
-| Macro               | SCREAMING_SNAKE_CASE       |
-| Function-like macro | PascalCase                 |
-| Type definition     | PascalCase                 |
+| Type                 | Convention                 |
+|----------------------|----------------------------|
+| File and folder name | snake_case                 |
+| Local variable       | snake_case                 |
+| Function argument    | snake_case                 |
+| Function name        | PascalCase                 |
+| Constexpr variable   | PascalCase with "k" prefix |
+| Enum entry           | PascalCase with "k" prefix |
+| Macro                | SCREAMING_SNAKE_CASE       |
+| Function-like macro  | PascalCase                 |
+| Type definition      | PascalCase                 |
 
 License Header
 --------------

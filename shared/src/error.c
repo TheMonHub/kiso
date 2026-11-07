@@ -3,6 +3,15 @@
 
 #include "error.h"
 
+#include <stdlib.h>
+
+#include "logger.h"
+
+#if defined(_WIN32)
+#include <windows.h>
+#include <winuser.h>
+#endif
+
 void InternalExitOnError(const char *msg, const int code, const char *file, const int line) {
     _log_message(LOG_FATAL, file, line, msg);
 
