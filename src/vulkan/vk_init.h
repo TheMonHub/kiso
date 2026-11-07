@@ -1,3 +1,6 @@
+// Copyright 2026 Podchara Phanthakhot
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef VK_INIT_H
 #define VK_INIT_H
 
@@ -40,21 +43,26 @@ typedef struct CreateSwapchainInfo {
 } CreateSwapchainInfo;
 
 [[nodiscard]]
-VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, uint32_t extensions_count, VkInstanceCreateFlags flags);
+VkResult CreateVulkanInstance(VkInstance *instance, const char **extensions, uint32_t extensions_count, VkInstanceCreateFlags flags);
 
 [[nodiscard]]
-VkResult GetVulkanPhysicalDevicesInfo(VkInstance instance, const VkPhysicalDevice *physical_device, uint32_t device_count, PhysicalDeviceInformation **info, char **error_message);
+VkResult GetVulkanPhysicalDevicesInfo(VkInstance instance, const VkPhysicalDevice *physical_device, uint32_t device_count,
+                                      PhysicalDeviceInformation **info, char **error_message);
 
-void GetVulkanPhysicalDevicesSurfaceSupport(const VkPhysicalDevice *physical_device, uint32_t device_count, PhysicalDeviceInformation *info, VkSurfaceKHR surface);
-
-[[nodiscard]]
-VkResult CreateVulkanDevice(VkPhysicalDevice physical_device, VkDevice* vk_device, const uint32_t queue_family_index[], uint32_t queue_family_count, const char * const extensions[], uint32_t extension_count, char** error_message);
-
-[[nodiscard]]
-bool GetBestPhysicalDeviceWithSwapchainAndPresentationSupport(const PhysicalDeviceInformation *properties, uint32_t device_count, uint32_t *best_device, VkQueueFlags required_flags) [[unsequenced]];
+void GetVulkanPhysicalDevicesSurfaceSupport(const VkPhysicalDevice *physical_device, uint32_t device_count, PhysicalDeviceInformation *info,
+                                            VkSurfaceKHR surface);
 
 [[nodiscard]]
-bool GetQueueFamilyIndexWithRequiredFlags(uint32_t queue_family_count, const VkQueueFamilyProperties *queue_family_info, VkQueueFlags required_flags, uint32_t *queue_family_index) [[unsequenced]];
+VkResult CreateVulkanDevice(VkPhysicalDevice physical_device, VkDevice *vk_device, const uint32_t queue_family_index[], uint32_t queue_family_count,
+                            const char *const extensions[], uint32_t extension_count, char **error_message);
+
+[[nodiscard]]
+bool GetBestPhysicalDeviceWithSwapchainAndPresentationSupport(const PhysicalDeviceInformation *properties, uint32_t device_count,
+                                                              uint32_t *best_device, VkQueueFlags required_flags) [[unsequenced]];
+
+[[nodiscard]]
+bool GetQueueFamilyIndexWithRequiredFlags(uint32_t queue_family_count, const VkQueueFamilyProperties *queue_family_info, VkQueueFlags required_flags,
+                                          uint32_t *queue_family_index) [[unsequenced]];
 
 bool CheckVulkanPhysicalDeviceExtensionSupport(VkPhysicalDevice device, const char *const *extensions, uint32_t extensions_count);
 
@@ -63,19 +71,23 @@ bool CheckVulkanInstanceLayerSupport(const char *const *extensions, uint32_t ext
 bool CheckVulkanInstanceExtensionSupport(const char *const *extensions, uint32_t extensions_count);
 
 [[nodiscard]]
-VkResult GetSwapchainSupportDetails(VkPhysicalDevice device, VkSurfaceKHR surface, SwapchainSupportDetails *details, char** error_message);
+VkResult GetSwapchainSupportDetails(VkPhysicalDevice device, VkSurfaceKHR surface, SwapchainSupportDetails *details, char **error_message);
 
-bool ChoosePreferredSurfaceFormat(const VkSurfaceFormatKHR* surface_formats, uint32_t surface_format_count, VkFormat preferred_format, VkColorSpaceKHR preferred_color_space, VkSurfaceFormatKHR **surface_format) [[unsequenced]];
+bool ChoosePreferredSurfaceFormat(const VkSurfaceFormatKHR *surface_formats, uint32_t surface_format_count, VkFormat preferred_format,
+                                  VkColorSpaceKHR preferred_color_space, VkSurfaceFormatKHR **surface_format) [[unsequenced]];
 
-bool ChoosePreferredPresentMode(const VkPresentModeKHR* present_modes, uint32_t present_mode_count, VkPresentModeKHR preferred_present_mode, VkPresentModeKHR *present_mode) [[unsequenced]];
+bool ChoosePreferredPresentMode(const VkPresentModeKHR *present_modes, uint32_t present_mode_count, VkPresentModeKHR preferred_present_mode,
+                                VkPresentModeKHR *present_mode) [[unsequenced]];
 
 VkExtent2D ChooseVulkanExtent(const VkSurfaceCapabilitiesKHR *capabilities, int width, int height);
 
 [[nodiscard]]
-VkResult CreateVulkanSwapchain(const CreateSwapchainInfo *info, VkSwapchainKHR *swapchain, VkImage **images, uint32_t *image_count, char** error_message);
+VkResult CreateVulkanSwapchain(const CreateSwapchainInfo *info, VkSwapchainKHR *swapchain, VkImage **images, uint32_t *image_count,
+                               char **error_message);
 
 [[nodiscard]]
-VkResult CreateImageViews(VkDevice device, const VkImage *images, uint32_t image_count, VkImageView *image_views, VkFormat swapchain_img_format, char** error_message);
+VkResult CreateImageViews(VkDevice device, const VkImage *images, uint32_t image_count, VkImageView *image_views, VkFormat swapchain_img_format,
+                          char **error_message);
 
 [[nodiscard]]
 VkResult CreateGraphicsPipeline(VkDevice device, VkShaderModule vertex_shader_module, VkShaderModule fragment_shader_module,
@@ -86,7 +98,8 @@ VkResult CreateGraphicsPipeline(VkDevice device, VkShaderModule vertex_shader_mo
 VkResult CreateCommandPool(VkDevice device, uint32_t queue_family_index, VkCommandPool *command_pool, char **error_message);
 
 [[nodiscard]]
-VkResult CreateCommandBuffers(VkDevice device, VkCommandPool command_pool, uint32_t command_buffer_count, VkCommandBuffer *command_buffers, char **error_message);
+VkResult CreateCommandBuffers(VkDevice device, VkCommandPool command_pool, uint32_t command_buffer_count, VkCommandBuffer *command_buffers,
+                              char **error_message);
 
 [[nodiscard]]
 VkResult CreateSyncObjects(

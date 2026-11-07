@@ -1,3 +1,6 @@
+// Copyright 2026 Podchara Phanthakhot
+// SPDX-License-Identifier: Apache-2.0
+
 #include "enum_to_str.h"
 
 const char *VulkanDeviceTypeToStr(const VkPhysicalDeviceType value) {

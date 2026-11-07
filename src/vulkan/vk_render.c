@@ -1,3 +1,6 @@
+// Copyright 2026 Podchara Phanthakhot
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vk_render.h"
 
 #include <assert.h>
@@ -47,8 +50,7 @@ static void TransitionImageLayout(VkCommandBuffer command_buffer, VkImage image,
 
 [[nodiscard]]
 VkResult RecordCommandBuffer(VkCommandBuffer command_buffer, VkImage image, VkImageView image_view, VkAttachmentLoadOp load_op,
-    VkPipeline pipeline, VkExtent2D extent, char **error_message) {
-
+                             VkPipeline pipeline, VkExtent2D extent, char **error_message) {
     const VkCommandBufferBeginInfo begin_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .pNext = nullptr,
@@ -98,8 +100,8 @@ VkResult RecordCommandBuffer(VkCommandBuffer command_buffer, VkImage image, VkIm
     const VkViewport viewport = {
         .x = 0.0f,
         .y = 0.0f,
-        .width = (float)extent.width,
-        .height = (float)extent.height,
+        .width = (float) extent.width,
+        .height = (float) extent.height,
         .minDepth = 0.0f,
         .maxDepth = 1.0f
     };
@@ -162,7 +164,8 @@ VkResult RecreateSwapchain(const RenderContext *render_context, const SwapchainR
         RETURN_ERROR("Failed to recreate swapchain", vk_result);
     }
 
-    vk_result = CreateImageViews(render_context->device, *info->images, new_image_count, *render_context->image_views, info->surface_format->format, error_message);
+    vk_result = CreateImageViews(render_context->device, *info->images, new_image_count, *render_context->image_views, info->surface_format->format,
+                                 error_message);
     if (vk_result != VK_SUCCESS) {
         RETURN_ERROR("Failed to create image views for new swapchain", vk_result);
     }
@@ -171,13 +174,15 @@ VkResult RecreateSwapchain(const RenderContext *render_context, const SwapchainR
 }
 
 VkResult DrawFrame(const RenderContext *render_context, const VkAttachmentLoadOp load_op, char **error_message) {
-    VkResult vk_result = vkWaitForFences(render_context->device, 1, &render_context->in_flight_fences[*render_context->current_frame], VK_TRUE, UINT64_MAX);
+    VkResult vk_result = vkWaitForFences(render_context->device, 1, &render_context->in_flight_fences[*render_context->current_frame], VK_TRUE,
+                                         UINT64_MAX);
     if (vk_result != VK_SUCCESS) {
         RETURN_ERROR("Failed to wait for in-flight fence", vk_result);
     }
 
     uint32_t image_index;
-    vk_result = vkAcquireNextImageKHR(render_context->device, *render_context->swapchain, UINT64_MAX, render_context->image_available_semaphores[*render_context->current_frame], VK_NULL_HANDLE, &image_index);
+    vk_result = vkAcquireNextImageKHR(render_context->device, *render_context->swapchain, UINT64_MAX,
+                                      render_context->image_available_semaphores[*render_context->current_frame], VK_NULL_HANDLE, &image_index);
     if (vk_result == VK_ERROR_OUT_OF_DATE_KHR) {
         log_trace("Swapchain is out of date");
         *render_context->is_framebuffer_resized = true;
@@ -199,7 +204,9 @@ VkResult DrawFrame(const RenderContext *render_context, const VkAttachmentLoadOp
     if (vk_result != VK_SUCCESS) {
         RETURN_ERROR("Failed to reset command buffer", vk_result);
     }
-    vk_result = RecordCommandBuffer(render_context->command_buffers[*render_context->current_frame], (*render_context->images)[image_index], (*render_context->image_views)[image_index], load_op, render_context->pipeline, *render_context->extent, error_message);
+    vk_result = RecordCommandBuffer(render_context->command_buffers[*render_context->current_frame], (*render_context->images)[image_index],
+                                    (*render_context->image_views)[image_index], load_op, render_context->pipeline, *render_context->extent,
+                                    error_message);
     if (vk_result != VK_SUCCESS) {
         RETURN_ERROR("Failed to record command buffer", vk_result);
     }

@@ -1,3 +1,6 @@
+// Copyright 2026 Podchara Phanthakhot
+// SPDX-License-Identifier: Apache-2.0
+
 #include <stdio.h>
 #include <string.h>
 #include "error.h"
@@ -74,7 +77,7 @@ int main(const int argc, char *argv[]) {
         .width = desired_window_width,
         .height = desired_window_height,
         .max_frame_in_flight = kMaxFramesInFlight,
-        .present_mode =kPresentModeMailbox,
+        .present_mode = kPresentModeMailbox,
         .glfw_callback_usr_ptr = nullptr
     };
 
@@ -92,13 +95,14 @@ int main(const int argc, char *argv[]) {
         PrintSetAndGoto("Cannot create a window", graphics_api_status, error_goto);
     }
 
-    while (!glfwWindowShouldClose(window)) { // Uhhhh for simplicity. Typically we need two thread to run this (I think)
+    while (!glfwWindowShouldClose(window)) {
+        // Uhhhh for simplicity. Typically we need two thread to run this (I think)
         glfwPollEvents();
         graphics_api.DrawTestTriangle(&graphics_api, window_data);
         graphics_api.DrawTestTriangle(&graphics_api, window_data_two);
     }
 
-    error_goto:
+error_goto:
     graphics_api.Fini(&graphics_api);
     return _current_error_status;
 }

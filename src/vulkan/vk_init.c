@@ -1,3 +1,6 @@
+// Copyright 2026 Podchara Phanthakhot
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vk_init.h"
 
 #include <string.h>
@@ -15,7 +18,7 @@
 
 static constexpr uint64_t kMaxDeviceSizeScore = 1280;
 
-VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, const uint32_t extensions_count, const VkInstanceCreateFlags flags) {
+VkResult CreateVulkanInstance(VkInstance *instance, const char **extensions, const uint32_t extensions_count, const VkInstanceCreateFlags flags) {
     log_info(LINE_SEPARATOR);
     log_info(
         "Vulkan API version: %d.%d.%d.%d",
@@ -39,7 +42,7 @@ VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, con
         .pEngineName = nullptr,
         .engineVersion = kProjectVersionNumber,
         .apiVersion = CURRENT_VK_API_VERSION
-      };
+    };
 
 #if defined(VK_VALIDATE)
     log_info("Checking for Vulkan validation layer support");
@@ -70,7 +73,7 @@ VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, con
 #endif
         .enabledExtensionCount = extensions_count,
         .ppEnabledExtensionNames = extensions
-      };
+    };
 
     return vkCreateInstance(&instance_create_info, nullptr, instance);
 }
@@ -112,16 +115,16 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
         log_debug("Physical device %d type: %s", i, VulkanDeviceTypeToStr(device_properties->deviceType));
         log_debug("Physical device %d driver version: %u", i, device_properties->driverVersion);
         log_debug("Physical device %d API version: %d.%d.%d",
-            i,
-            VK_VERSION_MAJOR(device_properties->apiVersion),
-            VK_VERSION_MINOR(device_properties->apiVersion),
-            VK_VERSION_PATCH(device_properties->apiVersion));
+                  i,
+                  VK_VERSION_MAJOR(device_properties->apiVersion),
+                  VK_VERSION_MINOR(device_properties->apiVersion),
+                  VK_VERSION_PATCH(device_properties->apiVersion));
 
         if (device_properties->deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
             device_information->score += 50;
         }
 
-        static const char * const swapchain_extensions[] = {
+        static const char *const swapchain_extensions[] = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME
         };
         device_information->swapchain_extension_supported = CheckVulkanPhysicalDeviceExtensionSupport(physical_device[i], swapchain_extensions, 1);
@@ -230,17 +233,18 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
     return VK_SUCCESS;
 }
 
-VkResult CreateVulkanDevice(const VkPhysicalDevice physical_device, VkDevice* vk_device, const uint32_t queue_family_index[], const uint32_t queue_family_count, const char * const extensions[], const uint32_t extension_count, char** error_message) {
+VkResult CreateVulkanDevice(const VkPhysicalDevice physical_device, VkDevice *vk_device, const uint32_t queue_family_index[],
+                            const uint32_t queue_family_count, const char *const extensions[], const uint32_t extension_count, char **error_message) {
     log_debug("Instructed to create a Vulkan device with %d extensions:", extension_count);
     for (uint32_t i = 0; i < extension_count; i++) {
         log_debug("Vulkan device extension: %s", extensions[i]);
     }
 
     VkDeviceQueueCreateInfo queue_infos[queue_family_count];
-    constexpr float queue_priorities[] = { 1.0f };
+    constexpr float queue_priorities[] = {1.0f};
     for (uint32_t i = 0; i < queue_family_count; i++) {
         log_trace("Vulkan device queue family index: %u", queue_family_index[i]);
-        queue_infos[i] = (VkDeviceQueueCreateInfo) {
+        queue_infos[i] = (VkDeviceQueueCreateInfo){
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
             .pNext = nullptr,
             .flags = 0,
@@ -277,7 +281,8 @@ VkResult CreateVulkanDevice(const VkPhysicalDevice physical_device, VkDevice* vk
     return VK_SUCCESS;
 }
 
-bool GetBestPhysicalDeviceWithSwapchainAndPresentationSupport(const PhysicalDeviceInformation *properties, const uint32_t device_count, uint32_t *best_device, const VkQueueFlags required_flags) {
+bool GetBestPhysicalDeviceWithSwapchainAndPresentationSupport(const PhysicalDeviceInformation *properties, const uint32_t device_count,
+                                                              uint32_t *best_device, const VkQueueFlags required_flags) {
     bool found_candidate = false;
     uint32_t device_candidate = 0;
     uint64_t current_best_score = 0;
@@ -305,7 +310,8 @@ bool GetBestPhysicalDeviceWithSwapchainAndPresentationSupport(const PhysicalDevi
     return found_candidate;
 }
 
-bool GetQueueFamilyIndexWithRequiredFlags(const uint32_t queue_family_count, const VkQueueFamilyProperties *queue_family_info, const VkQueueFlags required_flags,uint32_t *queue_family_index) {
+bool GetQueueFamilyIndexWithRequiredFlags(const uint32_t queue_family_count, const VkQueueFamilyProperties *queue_family_info,
+                                          const VkQueueFlags required_flags, uint32_t *queue_family_index) {
     for (uint32_t i = 0; i < queue_family_count; i++) {
         if ((queue_family_info[i].queueFlags & required_flags) == required_flags) {
             *queue_family_index = i;
@@ -409,7 +415,8 @@ bool CheckVulkanInstanceExtensionSupport(const char *const *extensions, const ui
 }
 
 // present_modes and formats are the caller's responsibility to free.
-VkResult GetSwapchainSupportDetails(const VkPhysicalDevice device, const VkSurfaceKHR surface, SwapchainSupportDetails *details, char** error_message) {
+VkResult GetSwapchainSupportDetails(const VkPhysicalDevice device, const VkSurfaceKHR surface, SwapchainSupportDetails *details,
+                                    char **error_message) {
     VkSurfaceCapabilitiesKHR capabilities;
     VkResult vk_result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &capabilities);
     if (vk_result != VK_SUCCESS) {
@@ -467,7 +474,8 @@ VkResult GetSwapchainSupportDetails(const VkPhysicalDevice device, const VkSurfa
     return VK_SUCCESS;
 }
 
-bool ChoosePreferredSurfaceFormat(const VkSurfaceFormatKHR* surface_formats, const uint32_t surface_format_count, const VkFormat preferred_format, const VkColorSpaceKHR preferred_color_space, VkSurfaceFormatKHR **surface_format) {
+bool ChoosePreferredSurfaceFormat(const VkSurfaceFormatKHR *surface_formats, const uint32_t surface_format_count, const VkFormat preferred_format,
+                                  const VkColorSpaceKHR preferred_color_space, VkSurfaceFormatKHR **surface_format) {
     for (uint32_t i = 0; i < surface_format_count; i++) {
         if (surface_formats[i].format == preferred_format && surface_formats[i].colorSpace == preferred_color_space) {
             *surface_format = (VkSurfaceFormatKHR *) &surface_formats[i];
@@ -478,7 +486,8 @@ bool ChoosePreferredSurfaceFormat(const VkSurfaceFormatKHR* surface_formats, con
     return false;
 }
 
-bool ChoosePreferredPresentMode(const VkPresentModeKHR* present_modes, const uint32_t present_mode_count, const VkPresentModeKHR preferred_present_mode, VkPresentModeKHR *present_mode) {
+bool ChoosePreferredPresentMode(const VkPresentModeKHR *present_modes, const uint32_t present_mode_count,
+                                const VkPresentModeKHR preferred_present_mode, VkPresentModeKHR *present_mode) {
     for (uint32_t i = 0; i < present_mode_count; i++) {
         if (present_modes[i] == preferred_present_mode) {
             *present_mode = present_modes[i];
@@ -494,14 +503,15 @@ VkExtent2D ChooseVulkanExtent(const VkSurfaceCapabilitiesKHR *capabilities, cons
         return capabilities->currentExtent;
     }
 
-    return (VkExtent2D) {
+    return (VkExtent2D){
         .width = UnsignedClamp((uint32_t) width, capabilities->minImageExtent.width, capabilities->maxImageExtent.width),
         .height = UnsignedClamp((uint32_t) height, capabilities->minImageExtent.height, capabilities->maxImageExtent.height),
     };
 }
 
 // images are the caller's responsibility to free.
-VkResult CreateVulkanSwapchain(const CreateSwapchainInfo *info, VkSwapchainKHR *swapchain, VkImage **images, uint32_t *image_count, char** error_message) {
+VkResult CreateVulkanSwapchain(const CreateSwapchainInfo *info, VkSwapchainKHR *swapchain, VkImage **images, uint32_t *image_count,
+                               char **error_message) {
     uint32_t image_request_count = info->swapchain_support->capabilities.minImageCount + 1;
     if (info->swapchain_support->capabilities.maxImageCount > 0 && image_request_count > info->swapchain_support->capabilities.maxImageCount) {
         image_request_count = info->swapchain_support->capabilities.maxImageCount;
@@ -525,7 +535,7 @@ VkResult CreateVulkanSwapchain(const CreateSwapchainInfo *info, VkSwapchainKHR *
     if (info->graphics_family_index != info->present_family_index) {
         create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         create_info.queueFamilyIndexCount = 2;
-        create_info.pQueueFamilyIndices = (uint32_t[2]) {info->graphics_family_index, info->present_family_index};
+        create_info.pQueueFamilyIndices = (uint32_t[2]){info->graphics_family_index, info->present_family_index};
     } else {
         create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
         create_info.queueFamilyIndexCount = 0;
@@ -549,13 +559,14 @@ VkResult CreateVulkanSwapchain(const CreateSwapchainInfo *info, VkSwapchainKHR *
 
     vk_result = vkGetSwapchainImagesKHR(info->device, *swapchain, image_count, *images);
     if (vk_result != VK_SUCCESS) {
-        free((void *)*images);
+        free((void *) *images);
         RETURN_ERROR("Failed to get swapchain images", vk_result);
     }
     return VK_SUCCESS;
 }
 
-VkResult CreateImageViews(const VkDevice device, const VkImage *images, const uint32_t image_count, VkImageView *image_views, const VkFormat swapchain_img_format, char** error_message) {
+VkResult CreateImageViews(const VkDevice device, const VkImage *images, const uint32_t image_count, VkImageView *image_views,
+                          const VkFormat swapchain_img_format, char **error_message) {
     for (uint32_t i = 0; i < image_count; ++i) {
         const VkImageViewCreateInfo create_info = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -564,13 +575,13 @@ VkResult CreateImageViews(const VkDevice device, const VkImage *images, const ui
             .image = images[i],
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = swapchain_img_format,
-            .components = (VkComponentMapping) {
+            .components = (VkComponentMapping){
                 .r = VK_COMPONENT_SWIZZLE_IDENTITY,
                 .g = VK_COMPONENT_SWIZZLE_IDENTITY,
                 .b = VK_COMPONENT_SWIZZLE_IDENTITY,
                 .a = VK_COMPONENT_SWIZZLE_IDENTITY
             },
-            .subresourceRange = (VkImageSubresourceRange) {
+            .subresourceRange = (VkImageSubresourceRange){
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,
                 .levelCount = 1,
@@ -638,7 +649,7 @@ VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vert
     };
 
     VkRect2D pScissors = {
-        .extent = (VkExtent2D) {
+        .extent = (VkExtent2D){
             .width = 100,
             .height = 100
         }
@@ -703,7 +714,7 @@ VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vert
         .logicOp = VK_LOGIC_OP_COPY,
         .attachmentCount = 1,
         .pAttachments = &color_blend_attachment,
-        .blendConstants = { 0.0f, 0.0f, 0.0f, 0.0f }
+        .blendConstants = {0.0f, 0.0f, 0.0f, 0.0f}
     };
 
     VkPipelineLayoutCreateInfo pipeline_layout_create_info = {
@@ -790,7 +801,8 @@ VkResult CreateCommandPool(const VkDevice device, const uint32_t queue_family_in
     return VK_SUCCESS;
 }
 
-VkResult CreateCommandBuffers(const VkDevice device, const VkCommandPool command_pool, const uint32_t command_buffer_count, VkCommandBuffer *command_buffers, char **error_message) {
+VkResult CreateCommandBuffers(const VkDevice device, const VkCommandPool command_pool, const uint32_t command_buffer_count,
+                              VkCommandBuffer *command_buffers, char **error_message) {
     const VkCommandBufferAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .pNext = nullptr,
@@ -903,7 +915,7 @@ VkResult CreateSyncObjects(
 
     return VK_SUCCESS;
 
-    cleanup:
+cleanup:
     DestroySyncObjects(
         device,
         *in_flight_fence,

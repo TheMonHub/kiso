@@ -1,15 +1,19 @@
+// Copyright 2026 Podchara Phanthakhot
+// SPDX-License-Identifier: Apache-2.0
+
 #include "vk_shader.h"
 
 #include "vulkan/vulkan.h"
 #include "vk_helper.h"
 
-VkResult CreateShaderModule(const unsigned char *code, const size_t code_size, const VkDevice device, VkShaderModule *shader_module, char **error_message) {
+VkResult CreateShaderModule(const unsigned char *code, const size_t code_size, const VkDevice device, VkShaderModule *shader_module,
+                            char **error_message) {
     const VkShaderModuleCreateInfo create_info = {
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
         .codeSize = code_size,
-        .pCode = (const uint32_t *)code
+        .pCode = (const uint32_t *) code
     };
 
     const VkResult result = vkCreateShaderModule(device, &create_info, nullptr, shader_module);

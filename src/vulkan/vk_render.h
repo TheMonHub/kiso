@@ -1,3 +1,6 @@
+// Copyright 2026 Podchara Phanthakhot
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef VK_RENDER_H
 #define VK_RENDER_H
 
@@ -39,7 +42,7 @@ typedef struct SwapchainRecreationInfo {
 
 [[nodiscard]]
 VkResult RecordCommandBuffer(VkCommandBuffer command_buffer, VkImage image, VkImageView image_view, VkAttachmentLoadOp load_op,
-    VkPipeline pipeline, VkExtent2D extent, char **error_message);
+                             VkPipeline pipeline, VkExtent2D extent, char **error_message);
 
 [[nodiscard]]
 VkResult RecreateSwapchain(const RenderContext *render_context, const SwapchainRecreationInfo *info, char **error_message);

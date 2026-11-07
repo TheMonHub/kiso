@@ -1,3 +1,6 @@
+// Copyright 2026 Podchara Phanthakhot
+// SPDX-License-Identifier: Apache-2.0
+
 // ReSharper disable CppParameterMayBeConstPtrOrRef
 #include "vk_api.h"
 
@@ -12,7 +15,7 @@
 #include "vk_render.h"
 #include "glfw/glfw_callbacks.h"
 
-GLFWAPI VkResult glfwCreateWindowSurface(VkInstance instance, GLFWwindow* window, const VkAllocationCallbacks* allocator, VkSurfaceKHR* surface);
+GLFWAPI VkResult glfwCreateWindowSurface(VkInstance instance, GLFWwindow *window, const VkAllocationCallbacks *allocator, VkSurfaceKHR *surface);
 
 typedef struct VulkanWindowData {
     struct VulkanWindowData *next;
@@ -107,18 +110,21 @@ static uint32_t Init(GraphicsApi *api) {
     log_debug("Found %u Vulkan physical devices", data->physical_device_count);
 
     char *error_str;
-    vk_result = GetVulkanPhysicalDevicesInfo(data->instance, data->physical_devices, data->physical_device_count, &data->physical_device_info, &error_str);
+    vk_result = GetVulkanPhysicalDevicesInfo(data->instance, data->physical_devices, data->physical_device_count, &data->physical_device_info,
+                                             &error_str);
     if (vk_result != VK_SUCCESS) {
         PrintAndReturn(error_str, vk_result);
     }
 
     log_info("Finding the most suitable physical device");
-    const bool has_physical_device = GetBestPhysicalDeviceWithSwapchainAndPresentationSupport(data->physical_device_info, data->physical_device_count, &data->best_physical_device_index, VK_QUEUE_GRAPHICS_BIT);
+    const bool has_physical_device = GetBestPhysicalDeviceWithSwapchainAndPresentationSupport(
+        data->physical_device_info, data->physical_device_count, &data->best_physical_device_index, VK_QUEUE_GRAPHICS_BIT);
     if (!has_physical_device) {
         PrintAndReturn("Failed to find a suitable physical device", 1);
     }
 
-    log_info("Suitable physical device found at index: %u: %s", data->best_physical_device_index, data->physical_device_info[data->best_physical_device_index].properties.deviceName);
+    log_info("Suitable physical device found at index: %u: %s", data->best_physical_device_index,
+             data->physical_device_info[data->best_physical_device_index].properties.deviceName);
 
     log_debug("Getting the graphics queue family");
     const bool has_graphic_queue_family = GetQueueFamilyIndexWithRequiredFlags(
@@ -135,7 +141,7 @@ static uint32_t Init(GraphicsApi *api) {
     log_debug("Presentation queue family: %u", data->present_queue_family);
 
     log_debug("Creating Vulkan device");
-    const char * const device_extensions[] = {
+    const char *const device_extensions[] = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
     uint32_t queue_families[2];
@@ -147,7 +153,8 @@ static uint32_t Init(GraphicsApi *api) {
         queue_family_count = 2;
     }
 
-    vk_result = CreateVulkanDevice(data->physical_devices[data->best_physical_device_index], &data->device, queue_families, queue_family_count, device_extensions, ARRAY_SIZE(device_extensions), &error_str);
+    vk_result = CreateVulkanDevice(data->physical_devices[data->best_physical_device_index], &data->device, queue_families, queue_family_count,
+                                   device_extensions, ARRAY_SIZE(device_extensions), &error_str);
     if (vk_result != VK_SUCCESS) {
         PrintAndReturn(error_str, vk_result);
     }
@@ -166,9 +173,11 @@ static uint32_t Init(GraphicsApi *api) {
 
     constexpr unsigned char vertex_shader_code[] = {
 #embed "shader.vert.spv"
+
     };
     constexpr unsigned char fragment_shader_code[] = {
 #embed "shader.frag.spv"
+
     };
     constexpr size_t vertex_shader_code_size = sizeof(vertex_shader_code);
     constexpr size_t fragment_shader_code_size = sizeof(fragment_shader_code);
@@ -215,7 +224,7 @@ static void Fini(GraphicsApi *api) {
     }
 
     if (data->physical_devices != nullptr) {
-        free((void*) data->physical_devices);
+        free((void *) data->physical_devices);
     }
     if (data->physical_device_info != nullptr) {
         free(data->physical_device_info);
@@ -243,8 +252,7 @@ static uint32_t CreateWindow(GraphicsApi *api, GLFWwindow **window, WindowCreate
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
     *window = glfwCreateWindow(create_info->width, create_info->height, "KISO", NULL, NULL);
-    if (*window == nullptr)
-    {
+    if (*window == nullptr) {
         PrintAndReturn("Failed to create window", 1);
     }
     prep_window_data->window = *window;
@@ -262,7 +270,8 @@ static uint32_t CreateWindow(GraphicsApi *api, GLFWwindow **window, WindowCreate
     log_debug("Initial window size: %d x %d", create_info->width, create_info->height);
 
     if (win_size_width != create_info->width || win_size_height != create_info->height) {
-        log_warn("Window size does not match desired size. Desired size: %d x %d Actual size: %d x %d", create_info->width, create_info->height, win_size_width, win_size_height);
+        log_warn("Window size does not match desired size. Desired size: %d x %d Actual size: %d x %d", create_info->width, create_info->height,
+                 win_size_width, win_size_height);
         log_warn("Resizing window to desired size");
 
         log_debug("Resizing window since it does not match the desired size initially");
@@ -273,32 +282,34 @@ static uint32_t CreateWindow(GraphicsApi *api, GLFWwindow **window, WindowCreate
         log_debug("Actual window size after resize: %d x %d", win_size_width, win_size_height);
 
         if (win_size_width != create_info->width || win_size_height != create_info->height) {
-            log_error("Window size does not match desired size after resize. Desired size: %d x %d Actual size: %d x %d", create_info->width, create_info->height, win_size_width, win_size_height);
+            log_error("Window size does not match desired size after resize. Desired size: %d x %d Actual size: %d x %d", create_info->width,
+                      create_info->height, win_size_width, win_size_height);
         }
     }
 
     log_debug("Creating window surface");
     VkResult vk_result = glfwCreateWindowSurface(data->instance, *window, nullptr, &prep_window_data->surface);
-    if (vk_result != VK_SUCCESS)
-    {
+    if (vk_result != VK_SUCCESS) {
         PrintAndReturn("Failed to create window surface", vk_result);
     }
 
     log_debug("Getting swapchain support details");
-    vk_result = GetSwapchainSupportDetails(data->physical_devices[data->best_physical_device_index], prep_window_data->surface, &prep_window_data->swapchain_support_details, &error_str);
+    vk_result = GetSwapchainSupportDetails(data->physical_devices[data->best_physical_device_index], prep_window_data->surface,
+                                           &prep_window_data->swapchain_support_details, &error_str);
     if (vk_result != VK_SUCCESS) {
         PrintAndReturn(error_str, vk_result);
     }
 
     const bool is_preferred_surface_format = ChoosePreferredSurfaceFormat(prep_window_data->swapchain_support_details.formats,
-        prep_window_data->swapchain_support_details.format_count,
-        VK_FORMAT_B8G8R8A8_SRGB,
-        VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
-        &prep_window_data->surface_format);
+                                                                          prep_window_data->swapchain_support_details.format_count,
+                                                                          VK_FORMAT_B8G8R8A8_SRGB,
+                                                                          VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+                                                                          &prep_window_data->surface_format);
     const bool is_preferred_present_mode = ChoosePreferredPresentMode(prep_window_data->swapchain_support_details.present_modes,
-        prep_window_data->swapchain_support_details.present_mode_count,
-        (VkPresentModeKHR) create_info->present_mode, // present_mode can be converted directly
-        &prep_window_data->present_mode);
+                                                                      prep_window_data->swapchain_support_details.present_mode_count,
+                                                                      (VkPresentModeKHR) create_info->present_mode,
+                                                                      // present_mode can be converted directly
+                                                                      &prep_window_data->present_mode);
 
     if (!is_preferred_surface_format) {
         log_info("Preferred surface format not found, using first available format");
@@ -328,7 +339,8 @@ static uint32_t CreateWindow(GraphicsApi *api, GLFWwindow **window, WindowCreate
     };
 
     log_debug("Creating Vulkan swapchain");
-    vk_result = CreateVulkanSwapchain(&create_swapchain_info, &prep_window_data->swapchain, &prep_window_data->images, &prep_window_data->image_count, &error_str);
+    vk_result = CreateVulkanSwapchain(&create_swapchain_info, &prep_window_data->swapchain, &prep_window_data->images, &prep_window_data->image_count,
+                                      &error_str);
     if (vk_result != VK_SUCCESS) {
         PrintAndReturn(error_str, vk_result);
     }
@@ -338,7 +350,8 @@ static uint32_t CreateWindow(GraphicsApi *api, GLFWwindow **window, WindowCreate
     if (!prep_window_data->image_views) {
         PrintAndReturn("Failed to allocate memory for image views", 1);
     }
-    vk_result = CreateImageViews(data->device, prep_window_data->images, prep_window_data->image_count, prep_window_data->image_views, prep_window_data->surface_format->format, &error_str);
+    vk_result = CreateImageViews(data->device, prep_window_data->images, prep_window_data->image_count, prep_window_data->image_views,
+                                 prep_window_data->surface_format->format, &error_str);
     if (vk_result != VK_SUCCESS) {
         PrintAndReturn(error_str, vk_result);
     }
@@ -356,7 +369,8 @@ static uint32_t CreateWindow(GraphicsApi *api, GLFWwindow **window, WindowCreate
 
     log_debug("Creating command buffers");
     prep_window_data->command_buffers = (VkCommandBuffer *) malloc(sizeof(VkCommandBuffer) * create_info->max_frame_in_flight);
-    vk_result = CreateCommandBuffers(data->device, prep_window_data->command_pool, create_info->max_frame_in_flight, prep_window_data->command_buffers, &error_str);
+    vk_result = CreateCommandBuffers(data->device, prep_window_data->command_pool, create_info->max_frame_in_flight,
+                                     prep_window_data->command_buffers, &error_str);
     if (vk_result != VK_SUCCESS) {
         PrintAndReturn(error_str, vk_result);
     }
@@ -365,7 +379,9 @@ static uint32_t CreateWindow(GraphicsApi *api, GLFWwindow **window, WindowCreate
     prep_window_data->image_available_semaphores = (VkSemaphore *) malloc(sizeof(VkSemaphore) * create_info->max_frame_in_flight);
     prep_window_data->render_finished_semaphores = (VkSemaphore *) malloc(sizeof(VkSemaphore) * prep_window_data->image_count);
     prep_window_data->in_flight_fences = (VkFence *) malloc(sizeof(VkFence) * create_info->max_frame_in_flight);
-    vk_result = CreateSyncObjects(data->device, &prep_window_data->in_flight_fences, &prep_window_data->image_available_semaphores, &prep_window_data->render_finished_semaphores, create_info->max_frame_in_flight, prep_window_data->image_count, &error_str);
+    vk_result = CreateSyncObjects(data->device, &prep_window_data->in_flight_fences, &prep_window_data->image_available_semaphores,
+                                  &prep_window_data->render_finished_semaphores, create_info->max_frame_in_flight, prep_window_data->image_count,
+                                  &error_str);
     if (vk_result != VK_SUCCESS) {
         PrintAndReturn(error_str, vk_result);
     }
@@ -423,12 +439,12 @@ static void DestroyWindow(GraphicsApi *api, WindowData window_data) {
         vkDestroySurfaceKHR(instance, data->surface, nullptr);
     }
 
-    free((void*) data->images);
-    free((void*) data->image_views);
-    free((void*) data->command_buffers);
-    free((void*) data->image_available_semaphores);
-    free((void*) data->render_finished_semaphores);
-    free((void*) data->in_flight_fences);
+    free((void *) data->images);
+    free((void *) data->image_views);
+    free((void *) data->command_buffers);
+    free((void *) data->image_available_semaphores);
+    free((void *) data->render_finished_semaphores);
+    free((void *) data->in_flight_fences);
 
     if (data->window) {
         glfwDestroyWindow(data->window);
@@ -547,7 +563,7 @@ static void PipelineListFindMatch(VulkanPipeline *pipeline, void *userdata, bool
     }
 }
 
-static uint32_t SetShader(GraphicsApi* api, WindowData window_data, ShaderData vertex, ShaderData fragment) {
+static uint32_t SetShader(GraphicsApi *api, WindowData window_data, ShaderData vertex, ShaderData fragment) {
     const BackendData *data = api->backend_data;
 
     PipelineListFindMatchData match_data = {
@@ -563,7 +579,7 @@ static uint32_t SetShader(GraphicsApi* api, WindowData window_data, ShaderData v
         return 0;
     }
 
-    VulkanPipeline pipeline ={
+    VulkanPipeline pipeline = {
         .vert_index = ((VulkanShaderModule *) vertex)->index,
         .frag_index = ((VulkanShaderModule *) fragment)->index,
         .format = ((VulkanWindowData *) window_data)->surface_format->format
@@ -601,7 +617,7 @@ static uint32_t SetShader(GraphicsApi* api, WindowData window_data, ShaderData v
 }
 
 GraphicsApi GetVulkanApi() {
-    return (GraphicsApi) {
+    return (GraphicsApi){
         .Init = Init,
         .Fini = Fini,
         .CreateWindow = CreateWindow,

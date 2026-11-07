@@ -1,10 +1,13 @@
+// Copyright 2026 Podchara Phanthakhot
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef VK_CLEANUP_H
 #define VK_CLEANUP_H
 
 #include "vk_init.h"
 #include "vulkan/vulkan.h"
 
-void CleanupPhysicalDeviceInformation(PhysicalDeviceInformation *physical_device_information);
+void CleanupPhysicalDeviceInformation(PhysicalDeviceInformation * physical_device_information);
 
 void CleanupSwapchainSupportDetails(const SwapchainSupportDetails *swapchain_support_details);
 

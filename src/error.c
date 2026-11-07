@@ -1,3 +1,6 @@
+// Copyright 2026 Podchara Phanthakhot
+// SPDX-License-Identifier: Apache-2.0
+
 #include "error.h"
 
 void InternalExitOnError(const char *msg, const int code, const char *file, const int line) {
