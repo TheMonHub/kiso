@@ -65,8 +65,6 @@ int main(const int argc, char *argv[]) {
     constexpr int desired_window_width = 640;
     constexpr int desired_window_height = 480;
 
-    log_info("Starting main loop");
-
     GraphicsApi graphics_api = GetVulkanApi();
     uint32_t graphics_api_status = graphics_api.Init(&graphics_api);
     if (graphics_api_status != 0) {
