@@ -19,13 +19,6 @@ typedef struct VulkanPipelineList {
     VulkanPipeline *pipelines;
 } VulkanPipelineList;
 
-typedef struct VulkanPipelineList {
-    uint32_t size;
-    uint32_t count;
-    struct VulkanPipelineList *next;
-    VulkanPipeline *pipelines;
-} VulkanPipelineList;
-
 typedef struct VulkanShaderModule {
     uint32_t index;
     VkShaderModule shader_module;
