@@ -25,7 +25,6 @@ add_library(KisoVulkan STATIC
         src/vk_list.h
 )
 
-
 target_link_libraries(KisoVulkan
         Vulkan::Vulkan
         KisoShared

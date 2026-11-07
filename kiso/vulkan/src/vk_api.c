@@ -208,7 +208,7 @@ static void Fini(GraphicsApi *api) {
         return;
     }
 
-    log_info("Destroying all window");
+    log_trace("Destroying all window");
     while (data->window_data) {
         api->DestroyWindow(api, data->window_data);
     }
@@ -267,8 +267,8 @@ static uint32_t CreateWindow(GraphicsApi *api, GLFWwindow **window, WindowCreate
     int win_size_width, win_size_height;
     glfwGetWindowSize(*window, &win_size_width, &win_size_height);
 
-    log_debug("Desired window size: %d x %d", create_info->width, create_info->height);
-    log_debug("Initial window size: %d x %d", create_info->width, create_info->height);
+    log_info("Desired window size: %d x %d", create_info->width, create_info->height);
+    log_info("Initial window size: %d x %d", create_info->width, create_info->height);
 
     if (win_size_width != create_info->width || win_size_height != create_info->height) {
         log_warn("Window size does not match desired size. Desired size: %d x %d Actual size: %d x %d", create_info->width, create_info->height,
@@ -277,10 +277,9 @@ static uint32_t CreateWindow(GraphicsApi *api, GLFWwindow **window, WindowCreate
 
         log_debug("Resizing window since it does not match the desired size initially");
         glfwSetWindowSize(*window, create_info->width, create_info->height);
-        log_debug("Window size resized to: %d x %d", create_info->width, create_info->height);
+        log_info("Window size resized to: %d x %d", create_info->width, create_info->height);
 
         glfwGetWindowSize(*window, &win_size_width, &win_size_height);
-        log_debug("Actual window size after resize: %d x %d", win_size_width, win_size_height);
 
         if (win_size_width != create_info->width || win_size_height != create_info->height) {
             log_error("Window size does not match desired size after resize. Desired size: %d x %d Actual size: %d x %d", create_info->width,
@@ -402,7 +401,8 @@ static void DestroyWindow(GraphicsApi *api, WindowData window_data) {
     const VkDevice device = backend->device;
     const VkInstance instance = backend->instance;
 
-    log_info("Waiting for device to become idle before cleanup");
+    log_trace("Destroying a window");
+    log_trace("Waiting for device to become idle before cleanup");
     vkDeviceWaitIdle(device);
 
     for (uint32_t i = 0; i < data->max_frame_in_flight; i++) {

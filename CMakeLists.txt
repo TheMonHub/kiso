@@ -78,5 +78,5 @@ add_subdirectory(logger)
 # --------------------------------------------------
 
 add_subdirectory(kiso/shared)
-add_subdirectory(kiso/graphics/vulkan)
+add_subdirectory(kiso/vulkan)
 add_subdirectory(kiso/core)
