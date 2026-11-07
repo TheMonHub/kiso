@@ -54,11 +54,11 @@ VkResult CreateVulkanInstance(VkInstance *instance, const char **extensions, con
 
     if (CheckVulkanInstanceLayerSupport(validation_layers, ARRAY_SIZE(validation_layers))) {
         log_info("Supported validation layer");
+        log_info("Enabling Vulkan validation layers");
         validation_layers_count = ARRAY_SIZE(validation_layers);
     } else {
         log_info("Do not supported validation layer");
     }
-    log_info("Enabling Vulkan validation layers");
 #endif
     const VkInstanceCreateInfo instance_create_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
