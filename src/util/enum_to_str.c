@@ -1,7 +1,5 @@
 #include "enum_to_str.h"
 
-#include "common_macro.h"
-
 const char *VulkanDeviceTypeToStr(const VkPhysicalDeviceType value) {
     switch (value) {
         case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:

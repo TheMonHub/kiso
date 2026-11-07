@@ -16,6 +16,7 @@ typedef struct QueueFamilyInfo {
     bool video_encode_bit;
     bool optical_flow_bit;
     bool data_graph_bit;
+    bool present_support;
 } QueueFamilyInfo;
 
 void ConvertQueueFamilyProperties(const VkQueueFamilyProperties *properties, uint32_t count, QueueFamilyInfo output[]) [[unsequenced]];

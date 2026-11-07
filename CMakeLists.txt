@@ -36,7 +36,9 @@ set(CMAKE_C_CLANG_TIDY
         "--warnings-as-errors=*"
 )
 
+
 find_package(Vulkan COMPONENTS REQUIRED)
+
 find_package(glfw3 REQUIRED)
 find_package(PkgConfig REQUIRED)
 # pkg_check_modules(cglm REQUIRED IMPORTED_TARGET cglm)
@@ -90,7 +92,6 @@ add_executable(kiso
         src/vulkan/vk_init.c
         src/vulkan/vk_init.h
         src/version.h
-        src/util/common_macro.h
         src/error.c
         src/error.h
         src/util/enum_to_str.c
@@ -106,9 +107,13 @@ add_executable(kiso
         src/vulkan/vk_render.c
         src/vulkan/vk_render.h
         src/vulkan/vk_helper.h
-        src/vulkan/vk_const.h
         src/glfw/glfw_callbacks.c
         src/glfw/glfw_callbacks.h
+        src/vulkan/vk_api.c
+        src/vulkan/vk_api.h
+        src/graphics_api.h
+        src/util/common.h
+        src/vulkan/vk_list.h
 )
 
 target_link_libraries(kiso

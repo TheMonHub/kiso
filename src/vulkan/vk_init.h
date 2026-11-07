@@ -1,11 +1,7 @@
 #ifndef VK_INIT_H
 #define VK_INIT_H
 
-#include <vulkan/vulkan.h>
-
 #include "vk_convert.h"
-#include "GLFW/glfw3.h"
-#include "vk_const.h"
 
 #define CURRENT_VK_API_VERSION VK_API_VERSION_1_3
 
@@ -47,7 +43,9 @@ typedef struct CreateSwapchainInfo {
 VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, uint32_t extensions_count, VkInstanceCreateFlags flags);
 
 [[nodiscard]]
-VkResult GetVulkanPhysicalDevicesInfo(VkInstance instance, const VkPhysicalDevice *physical_device, uint32_t device_count, PhysicalDeviceInformation **info, VkSurfaceKHR surface, char** error_message);
+VkResult GetVulkanPhysicalDevicesInfo(VkInstance instance, const VkPhysicalDevice *physical_device, uint32_t device_count, PhysicalDeviceInformation **info, char **error_message);
+
+void GetVulkanPhysicalDevicesSurfaceSupport(const VkPhysicalDevice *physical_device, uint32_t device_count, PhysicalDeviceInformation *info, VkSurfaceKHR surface);
 
 [[nodiscard]]
 VkResult CreateVulkanDevice(VkPhysicalDevice physical_device, VkDevice* vk_device, const uint32_t queue_family_index[], uint32_t queue_family_count, const char * const extensions[], uint32_t extension_count, char** error_message);
@@ -81,8 +79,8 @@ VkResult CreateImageViews(VkDevice device, const VkImage *images, uint32_t image
 
 [[nodiscard]]
 VkResult CreateGraphicsPipeline(VkDevice device, VkShaderModule vertex_shader_module, VkShaderModule fragment_shader_module,
-    const VkPipelineVertexInputStateCreateInfo *vertex_input_info, const VkExtent2D *extent, VkPipelineLayout *pipeline_layout,
-    VkPipeline *pipeline, VkFormat image_format, char **error_message);
+                                VkPipelineLayout *pipeline_layout,
+                                VkPipeline *pipeline, VkFormat image_format, char **error_message);
 
 [[nodiscard]]
 VkResult CreateCommandPool(VkDevice device, uint32_t queue_family_index, VkCommandPool *command_pool, char **error_message);

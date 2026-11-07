@@ -8,4 +8,6 @@
 
 #define LINE_SEPARATOR "==========================="
 
+constexpr int kMaxFramesInFlight = 2;
+
 #endif // COMMON_H

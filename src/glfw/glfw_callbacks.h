@@ -3,6 +3,6 @@
 
 #include "GLFW/glfw3.h"
 
-void GlfwCallbackSetPointerTrue(GLFWwindow *window);
+void GlfwCallbackSetFramebufferResized(GLFWwindow *window);
 
 #endif // GLFW_CALLBACKS_H

@@ -1,18 +1,14 @@
 #include "vk_init.h"
 
-#include <limits.h>
 #include <string.h>
 
-#include <vulkan/vulkan.h>
-#include "GLFW/glfw3.h"
-#include "util/common_macro.h"
+#include <GLFW/glfw3.h>
+#include "util/common.h"
 #include "version.h"
 
 #include "error.h"
 #include "logger.h"
-#include "vk_cleanup.h"
 #include "vk_convert.h"
-#include "vk_shader.h"
 #include "util/enum_to_str.h"
 #include "util/math.h"
 #include "vk_helper.h"
@@ -45,7 +41,7 @@ VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, con
         .apiVersion = CURRENT_VK_API_VERSION
       };
 
-#if !defined(VK_VALIDATE)
+#if defined(VK_VALIDATE)
     log_info("Checking for Vulkan validation layer support");
     static const char *validation_layers[] = {
         "VK_LAYER_KHRONOS_validation"
@@ -65,7 +61,7 @@ VkResult CreateVulkanInstance(VkInstance* instance, const char** extensions, con
         .pNext = nullptr,
         .flags = flags,
         .pApplicationInfo = &application_info,
-#if !defined(VK_VALIDATE)
+#if defined(VK_VALIDATE)
         .enabledLayerCount = validation_layers_count,
         .ppEnabledLayerNames = validation_layers,
 #else
@@ -94,8 +90,8 @@ static int GetScoreBasedOnHeapFlags(const VkFlags flags) {
 
 // The caller of this function is responsible for freeing the memory allocated for the properties array.
 // Being the PhysicalDeviceInformation array, queue_family_properties array inside each PhysicalDeviceInformation entry all from the returned array.
-VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysicalDevice *physical_device, const uint32_t device_count,
-    PhysicalDeviceInformation **info, const VkSurfaceKHR surface, char** error_message) {
+VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysicalDevice *physical_device,
+                                      const uint32_t device_count, PhysicalDeviceInformation **info, char **error_message) {
     log_debug("Instructed to get Vulkan physical devices information");
 
     *info = calloc(device_count, sizeof(PhysicalDeviceInformation));
@@ -166,10 +162,9 @@ VkResult GetVulkanPhysicalDevicesInfo(const VkInstance instance, const VkPhysica
                       queue_family_info[j].optical_flow_bit,
                       queue_family_info[j].data_graph_bit);
 
-            VkBool32 surface_support = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(physical_device[i], j, surface, &surface_support);
-            log_debug("Physical device %d queue family %d surface support: %d", i, j, surface_support);
-            if (!device_information->queue_family_surface_support_present && surface_support) {
+            queue_family_info[j].present_support = glfwGetPhysicalDevicePresentationSupport(instance, physical_device[i], j);
+            log_debug("Physical device %d queue family %d surface support: %d", i, j, queue_family_info[j].present_support);
+            if (!device_information->queue_family_surface_support_present && queue_family_info[j].present_support) {
                 device_information->queue_family_surface_support_index = j;
                 device_information->queue_family_surface_support_present = true;
                 log_debug("Physical device %d queue family %d is chosen for presentation", i, j);
@@ -507,15 +502,10 @@ VkExtent2D ChooseVulkanExtent(const VkSurfaceCapabilitiesKHR *capabilities, cons
 
 // images are the caller's responsibility to free.
 VkResult CreateVulkanSwapchain(const CreateSwapchainInfo *info, VkSwapchainKHR *swapchain, VkImage **images, uint32_t *image_count, char** error_message) {
-    log_trace("Instructed to create a Vulkan swapchain");
-    log_trace("Using surface format: format=%08X, color_space=%08X", info->surface_format->format, info->surface_format->colorSpace);
-    log_trace("Using present mode: %s", VkPresentModeToStr(info->present_mode));
-
     uint32_t image_request_count = info->swapchain_support->capabilities.minImageCount + 1;
     if (info->swapchain_support->capabilities.maxImageCount > 0 && image_request_count > info->swapchain_support->capabilities.maxImageCount) {
         image_request_count = info->swapchain_support->capabilities.maxImageCount;
     }
-    log_trace("Using image count: %u", image_request_count);
 
     VkSwapchainCreateInfoKHR create_info = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -599,8 +589,8 @@ VkResult CreateImageViews(const VkDevice device, const VkImage *images, const ui
 }
 
 VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vertex_shader_module, const VkShaderModule fragment_shader_module,
-    const VkPipelineVertexInputStateCreateInfo *vertex_input_info, const VkExtent2D *extent, VkPipelineLayout *pipeline_layout,
-    VkPipeline *pipeline, VkFormat image_format, char **error_message) {
+                                VkPipelineLayout *pipeline_layout,
+                                VkPipeline *pipeline, VkFormat image_format, char **error_message) {
     log_debug("Instructed to create a Vulkan graphics pipeline");
     const VkPipelineShaderStageCreateInfo vertShaderStageInfo = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -642,18 +632,16 @@ VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vert
         .primitiveRestartEnable = VK_FALSE
     };
 
-    VkViewport viewport = {
-        .x = 0.0f,
-        .y = 0.0f,
-        .width = (float)extent->width,
-        .height = (float)extent->height,
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
+    VkViewport pViewports = {
+        .height = 100,
+        .width = 100
     };
 
-    VkRect2D scissor = {
-        .offset = {.x = 0, .y = 0},
-        .extent = *extent
+    VkRect2D pScissors = {
+        .extent = (VkExtent2D) {
+            .width = 100,
+            .height = 100
+        }
     };
 
     VkPipelineViewportStateCreateInfo viewport_state = {
@@ -661,9 +649,9 @@ VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vert
         .pNext = nullptr,
         .flags = 0,
         .viewportCount = 1,
-        .pViewports = &viewport,
+        .pViewports = &pViewports,
         .scissorCount = 1,
-        .pScissors = &scissor
+        .pScissors = &pScissors
     };
 
     VkPipelineRasterizationStateCreateInfo rasterizer = {
@@ -744,13 +732,23 @@ VkResult CreateGraphicsPipeline(const VkDevice device, const VkShaderModule vert
         .stencilAttachmentFormat = VK_FORMAT_UNDEFINED
     };
 
+    const VkPipelineVertexInputStateCreateInfo vertex_input_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .vertexBindingDescriptionCount = 0,
+        .pVertexBindingDescriptions = nullptr,
+        .vertexAttributeDescriptionCount = 0,
+        .pVertexAttributeDescriptions = nullptr
+    };
+
     VkGraphicsPipelineCreateInfo pipeline_info = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .pNext = &rendering_create_info,
         .flags = 0,
         .stageCount = ARRAY_SIZE(shader_stages),
         .pStages = shader_stages,
-        .pVertexInputState = vertex_input_info,
+        .pVertexInputState = &vertex_input_info,
         .pInputAssemblyState = &input_assembly,
         .pTessellationState = nullptr,
         .pViewportState = &viewport_state,
