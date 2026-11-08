@@ -1,7 +1,7 @@
 Contributing to KISO
 --------------------
 
-Welcome and thank you that you considered contributing to KISO.
+Welcome and thank you for considering contributing to KISO.
 [GitHub issues](https://github.com/TheMonHub/kiso/issues/) is
 your best friend when it comes to coordinating with each other.
 Let's get started on it, assuming you know what you're doing.
@@ -57,8 +57,8 @@ its file extension. Add a comment at `#endif` containing the name.
 clang-tidy
 ---------
 
-You will need to run clang-tidy to lint your code. Any problem
-from clang-tidy should be fixed.
+You will need to run clang-tidy to lint your code. All clang-tidy
+issues should be addressed
 
 You can run the check through CMake directly by turning on
 `RUN_CLANG_TIDY`.

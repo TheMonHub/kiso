@@ -7,12 +7,12 @@ in lua, from games to tools. KISO is and will always be FOSS.
 About
 -----
 
-KISO is a framework written in C23 that you can use to create
+KISO is a framework written in C23, which you can use to create
 applications, games, and more for a desktop platform. It uses LuaJIT
 as its scripting language.
 
 KISO supports running on Windows, Linux, and in the future, macOS.
-Currently, KISO doesn't support macOS. Any contributions are welcome.
+Currently, KISO doesn't support macOS. Contributions are welcome.
 
 Building
 --------
@@ -36,7 +36,7 @@ cmake --build build
 Contributing
 ------------
 
-Consider contributing to KISO to help it get better for everyone.
+Consider contributing to KISO to help it improve for everyone.
 Details regarding the contribution guidelines are written in
 [CONTRIBUTING.md](CONTRIBUTING.md)
 
