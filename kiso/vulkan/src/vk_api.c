@@ -271,7 +271,6 @@ static uint32_t CreateWindow(GraphicsApi *api, GLFWwindow **window, WindowCreate
     glfwGetWindowSize(*window, &win_size_width, &win_size_height);
 
     log_info("Desired window size: %d x %d", create_info->width, create_info->height);
-    log_info("Initial window size: %d x %d", create_info->width, create_info->height);
 
     if (win_size_width != create_info->width || win_size_height != create_info->height) {
         log_warn("Window size does not match desired size. Desired size: %d x %d Actual size: %d x %d", create_info->width, create_info->height,
