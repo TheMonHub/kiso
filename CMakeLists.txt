@@ -18,25 +18,25 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
 if (RUN_CLANG_TIDY)
+    string(JOIN ","
+            CLANG_TIDY_CHECKS
+            bugprone-*
+            performance-*
+            clang-analyzer-*
+            cert-*
+            modernize-use-nodiscard
+            -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+            -clang-diagnostic-unknown-attributes
+            -bugprone-easily-swappable-parameters
+            -bugprone-signed-bitwise
+    )
+
     set(CMAKE_C_CLANG_TIDY
             clang-tidy
-            "--format-style=file"
-            "--header-filter='.*/kiso/.*'"
-
-            "
-            --checks=
-            bugprone-*,
-            performance-*,
-            clang-analyzer-*,
-            cert-*,
-            modernize-use-nodiscard,
-            -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,
-            -clang-diagnostic-unknown-attributes,
-            -bugprone-easily-swappable-parameters,
-            -bugprone-signed-bitwise
-            "
-
-            "--warnings-as-errors=*"
+            --format-style=file
+            "--header-filter=${PROJECT_SOURCE_DIR}/kiso/.*"
+            "--checks=${CLANG_TIDY_CHECKS}"
+            --warnings-as-errors=*
     )
 else ()
     set(CMAKE_C_CLANG_TIDY "")
