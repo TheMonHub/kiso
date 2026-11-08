@@ -18,10 +18,10 @@ Building
 --------
 
 To build KISO, you will need the following installed in your system:
-- Vulkan SDK (v1.3 minimum)
-- GLFW (v3)
+- Vulkan SDK (1.3+)
+- GLFW (3.4+)
 - Git
-- CMake (v4.4 minimum)
+- CMake (4.4+)
 - GCC (C23)
 - LuaJIT (2.1)
 - pkgconf
