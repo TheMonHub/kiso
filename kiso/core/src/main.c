@@ -17,24 +17,27 @@ int main(const int argc, char *argv[]) {
 
     double previous_time = GetMonotonicTime();
 
-    static const struct timespec ts = {
-        .tv_sec = 0,
-        .tv_nsec = 0,
-    };
-
     while (!ShouldExit()) {
         handlePossibleExitRequest(state);
+
         const double current_time = GetMonotonicTime();
         const double deltaTime = current_time - previous_time;
         const double limit_update_rate = GetLimitUpdateRate();
-        if (limit_update_rate == 0 || deltaTime > 1 / limit_update_rate) {
+
+        if (limit_update_rate == 0 || deltaTime >= 1.0 / limit_update_rate) {
             previous_time = current_time;
             runUpdate(state, deltaTime);
             continue;
         }
 
-        // NOLINTNEXTLINE(cert-err33-c)
-        thrd_sleep(&ts, NULL);
+        const double remaining_time = 1.0 / limit_update_rate - deltaTime;
+
+        struct timespec ts = {
+            .tv_sec = 0,
+            .tv_nsec = (long)(remaining_time * 1'000'000'000)
+        };
+
+        (void)thrd_sleep(&ts, NULL);
     }
 
     lua_close(state);

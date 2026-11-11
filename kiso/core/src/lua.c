@@ -64,8 +64,7 @@ static int LuaKisoSleep(lua_State *state) {
     ts.tv_nsec = (long)((seconds - (double)ts.tv_sec) * 1e9);
 
     // Genuinely no idea how to handle this if it errors.
-    // NOLINTNEXTLINE(cert-err33-c)
-    thrd_sleep(&ts, NULL);
+    (void)thrd_sleep(&ts, NULL);
     return 0;
 }
 
