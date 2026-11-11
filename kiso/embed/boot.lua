@@ -2,6 +2,13 @@ kiso.callbacks = {}
 kiso.callbacks.onExit = {}
 kiso.callbacks.update = {}
 
+kiso.enum = {}
+
+kiso.enum.exitRequestType = {
+    Interrupt = 2,
+    Terminate = 15,
+}
+
 function kiso.callbacks.onExitRequest(requestType)
     if requestType == kiso.enum.exitRequestType.Terminate then
         print("You dare tried terminate me")
@@ -14,10 +21,3 @@ function kiso.callbacks.onError(msg)
     print("[ERROR] " .. notNilMsg)
     kiso.exit(1)
 end
-
-kiso.enum = {}
-
-kiso.enum.exitRequestType = {
-    Interrupt = 2,
-    Terminate = 15,
-}
