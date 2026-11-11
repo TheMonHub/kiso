@@ -23,7 +23,7 @@ static char **g_argv = nullptr;
 static bool g_should_exit = false;
 static int g_exit_code = 0;
 
-static lua_Integer g_limit_update_rate = 0;
+static lua_Integer g_limit_callbacks_rate = 0;
 
 static sig_atomic_t g_signal_to_handle = 0;
 
@@ -73,14 +73,14 @@ static int LuaKisoGetMonotonicTime(lua_State *state) {
     return 1;
 }
 
-static int LuaKisoSetLimitUpdateRate(lua_State *state) {
+static int LuaKisoSetLimitCallbacksRate(lua_State *state) {
     const size_t limit = luaL_checkinteger(state, 1);
-    g_limit_update_rate = (lua_Integer)limit;
+    g_limit_callbacks_rate = (lua_Integer)limit;
     return 0;
 }
 
-static int LuaKisoGetLimitUpdateRate(lua_State *state) {
-    lua_pushinteger(state, g_limit_update_rate);
+static int LuaKisoGetLimitCallbacksRate(lua_State *state) {
+    lua_pushinteger(state, g_limit_callbacks_rate);
     return 1;
 }
 
@@ -287,8 +287,8 @@ int GetCurrentExitCode() {
     return g_exit_code;
 }
 
-double GetLimitUpdateRate() {
-    return (double)g_limit_update_rate;
+double GetLimitCallbacksRate() {
+    return (double)g_limit_callbacks_rate;
 }
 
 int RunAppFolder(const char *path, lua_State **out, const int argc, char *argv[]) {
@@ -330,11 +330,11 @@ int RunAppFolder(const char *path, lua_State **out, const int argc, char *argv[]
     lua_pushcfunction(state, LuaKisoGetMonotonicTime);
     lua_setfield(state, -2, "getMonotonicTime");
 
-    lua_pushcfunction(state, LuaKisoSetLimitUpdateRate);
-    lua_setfield(state, -2, "setLimitUpdateRate");
+    lua_pushcfunction(state, LuaKisoSetLimitCallbacksRate);
+    lua_setfield(state, -2, "setLimitCallbacksRate");
 
-    lua_pushcfunction(state, LuaKisoGetLimitUpdateRate);
-    lua_setfield(state, -2, "getLimitUpdateRate");
+    lua_pushcfunction(state, LuaKisoGetLimitCallbacksRate);
+    lua_setfield(state, -2, "getLimitCallbacksRate");
 
     lua_pushcfunction(state, LuaKisoExit);
     lua_setfield(state, -2, "exit");
