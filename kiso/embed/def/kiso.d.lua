@@ -63,12 +63,13 @@ function kiso.getMonotonicTime() end
 --- are handled right before the update callback in the main thread except for a certain callback such as `onError`.
 --- Use `0` for disabling the limit.
 --- @param rate integer Limit of the callbacks rate per second.
-function kiso.setLimitUpdateRate(rate) end
+--- @see kiso.getLimitCallbacksRate
+function kiso.setLimitCallbacksRate(rate) end
 
 --- Set how fast does the callbacks get called per second.
 --- @return integer rate Limit of the callbacks rate per second.
---- @see kiso.setLimitUpdateRate
-function kiso.getLimitUpdateRate() end
+--- @see kiso.setLimitCallbacksRate
+function kiso.getLimitCallbacksRate() end
 
 --- Stops every ongoing operations and calls every registered onExit callbacks then close the program with the specified
 --- exit code. This function will wait until every ongoing operation, and onExit callbacks finished running.
