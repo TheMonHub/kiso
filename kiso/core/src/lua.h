@@ -13,7 +13,7 @@ void runUpdate(lua_State *state, double deltaTime);
 
 bool ShouldExit();
 int GetCurrentExitCode();
-double GetLimitUpdateRate();
+double GetLimitCallbacksRate();
 int RunAppFolder(const char *path, lua_State **out, int argc, char *argv[]);
 
 #endif // INIT_H
