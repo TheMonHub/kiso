@@ -49,20 +49,29 @@ endif ()
 # --------------------------------------------------
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES
-        "../shader/*.frag"
-        "../shader/*.vert"
+        "../shader/*"
+        "../shader/*"
 )
 
-foreach (GLSL ${GLSL_SOURCE_FILES})
-    get_filename_component(FILE_NAME ${GLSL} NAME)
-    set(SPIRV "${PROJECT_BINARY_DIR}/shader/${FILE_NAME}.spv")
+foreach (GLSL IN LISTS GLSL_SOURCE_FILES)
+    file(RELATIVE_PATH RELATIVE_PATH
+            "${CMAKE_CURRENT_SOURCE_DIR}/../shader"
+            "${GLSL}"
+    )
+
+    set(SPIRV "${PROJECT_BINARY_DIR}/shader/${RELATIVE_PATH}.spv")
+
+    get_filename_component(OUTPUT_DIR "${SPIRV}" DIRECTORY)
+
     add_custom_command(
-            OUTPUT ${SPIRV}
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/shader/"
-            COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V ${GLSL} -o ${SPIRV}
-            DEPENDS ${GLSL})
-    list(APPEND SPIRV_BINARY_FILES ${SPIRV})
-endforeach (GLSL)
+            OUTPUT "${SPIRV}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${OUTPUT_DIR}"
+            COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${GLSL}" -o "${SPIRV}"
+            DEPENDS "${GLSL}"
+    )
+
+    list(APPEND SPIRV_BINARY_FILES "${SPIRV}")
+endforeach()
 
 add_custom_target(
         KisoSPRIVShader

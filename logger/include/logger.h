@@ -1,9 +1,5 @@
-/**
- * Copyright (c) 2025 JeepWay
- *
- * This library is free, you can redistribute and modify it
- * under the MIT License, see logger.c for details.
- */
+// Copyright 2025-2026 Podchara Phanthakhot
+// SPDX-License-Identifier: Apache-2.0
 
 #ifndef LOG_H
 #define LOG_H
