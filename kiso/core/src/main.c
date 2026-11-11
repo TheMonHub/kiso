@@ -22,7 +22,7 @@ int main(const int argc, char *argv[]) {
 
         const double current_time = GetMonotonicTime();
         const double deltaTime = current_time - previous_time;
-        const double limit_update_rate = GetLimitUpdateRate();
+        const double limit_update_rate = GetLimitCallbacksRate();
 
         if (limit_update_rate == 0 || deltaTime >= 1.0 / limit_update_rate) {
             previous_time = current_time;
