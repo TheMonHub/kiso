@@ -58,13 +58,14 @@ function kiso.sleep(timeInSeconds) end
 --- @return number monotonicTime
 function kiso.getMonotonicTime() end
 
---- Set how fast does the update callbacks get called per second. KISO will not limit the rate by default, consuming CPU
---- and resources. It is advised to set a limit to this. This may cause a delay to a certain callback other than update.
+--- Set how fast does the callbacks get called per second. KISO will not limit the rate by default, consuming CPU
+--- and resources. It is advised to set a limit to this. This will apply to every callbacks as every callbacks
+--- are handled right before the update callback in the main thread except for a certain callback such as `onError`.
 --- Use `0` for disabling the limit.
 --- @param rate integer Limit of the callbacks rate per second.
 function kiso.setLimitUpdateRate(rate) end
 
---- Set how fast does the update callbacks get called per second.
+--- Set how fast does the callbacks get called per second.
 --- @return integer rate Limit of the callbacks rate per second.
 --- @see kiso.setLimitUpdateRate
 function kiso.getLimitUpdateRate() end
