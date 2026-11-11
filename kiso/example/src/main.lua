@@ -26,4 +26,4 @@ table.insert(kiso.callbacks.update, function(deltaTime)
     num = num + 1
 end)
 
-kiso.setLimitUpdateRate(30)
+kiso.setLimitCallbacksRate(30)
