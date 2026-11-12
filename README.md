@@ -28,9 +28,10 @@ To build KISO, you will need the following installed in your system:
 
 You can then directly run the build commands through CMake.
 
-```commandline
-cmake -B build -S.
+```bash
+cmake -B build
 cmake --build build
+sudo cmake --install build # optional! install KISO command-line tools
 ```
 
 Contributing

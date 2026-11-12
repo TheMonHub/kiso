@@ -29,6 +29,7 @@ if (RUN_CLANG_TIDY)
             -clang-diagnostic-unknown-attributes
             -bugprone-easily-swappable-parameters
             -bugprone-signed-bitwise
+            -cert-err33-c
     )
 
     set(CMAKE_C_CLANG_TIDY
@@ -80,3 +81,4 @@ add_subdirectory(logger)
 add_subdirectory(kiso/shared)
 add_subdirectory(kiso/vulkan)
 add_subdirectory(kiso/core)
+add_subdirectory(kiso/cli)

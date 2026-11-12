@@ -1,7 +1,7 @@
 // Copyright 2026 Podchara Phanthakhot
 // SPDX-License-Identifier: Apache-2.0
 
-#include "lua.h"
+#include "kiso/app.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -11,8 +11,8 @@
 
 #include "logger.h"
 
-#include "lauxlib.h"
-#include "lualib.h"
+#include <lauxlib.h>
+#include <lualib.h>
 #include "kiso/time.h"
 
 #include "kiso/version.h"
@@ -194,7 +194,7 @@ void HandleLuaError(lua_State *state) {
     lua_pop(state, 3);
 }
 
-void handlePossibleExitRequest(lua_State *state) {
+void HandlePossibleExitRequest(lua_State *state) {
     if (!g_signal_to_handle) {
         return;
     }
@@ -235,7 +235,7 @@ void handlePossibleExitRequest(lua_State *state) {
     g_signal_to_handle = 0;
 }
 
-void runUpdate(lua_State* state, double deltaTime) {
+void RunUpdate(lua_State* state, double deltaTime) {
     if (g_should_exit) {
         return;
     }
@@ -384,7 +384,7 @@ int RunAppFolder(const char *path, lua_State **out, const int argc, char *argv[]
     double previous_time = GetMonotonicTime();
 
     while (!ShouldExit()) {
-        handlePossibleExitRequest(state);
+        HandlePossibleExitRequest(state);
 
         const double current_time = GetMonotonicTime();
         const double deltaTime = current_time - previous_time;
@@ -392,7 +392,7 @@ int RunAppFolder(const char *path, lua_State **out, const int argc, char *argv[]
 
         if (limit_update_rate == 0 || deltaTime >= 1.0 / limit_update_rate) {
             previous_time = current_time;
-            runUpdate(state, deltaTime);
+            RunUpdate(state, deltaTime);
             continue;
         }
 
