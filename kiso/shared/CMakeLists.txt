@@ -73,12 +73,12 @@ foreach (EMBED IN LISTS EMBED_FILES)
 
     if(EMBED_EXT STREQUAL ".lua")
         add_custom_command(
-                OUTPUT "${EMBED_OUT}"
+                OUTPUT "${EMBED_OUT}bc"
                 COMMAND ${CMAKE_COMMAND} -E make_directory "${OUTPUT_DIR}"
                 COMMAND luajit -b "${EMBED}" "${EMBED_OUT}bc"
                 DEPENDS "${EMBED}"
         )
-
+        list(APPEND EMBED_OUT_FILES "${EMBED_OUT}bc")
     else()
         add_custom_command(
                 OUTPUT "${EMBED_OUT}"
@@ -87,9 +87,8 @@ foreach (EMBED IN LISTS EMBED_FILES)
                 "${EMBED}" "${EMBED_OUT}"
                 DEPENDS "${EMBED}"
         )
+        list(APPEND EMBED_OUT_FILES "${EMBED_OUT}")
     endif()
-
-    list(APPEND EMBED_OUT_FILES "${EMBED_OUT}")
 endforeach()
 
 add_custom_target(
