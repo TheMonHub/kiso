@@ -1,3 +1,6 @@
+// Copyright 2026 Podchara Phanthakhot
+// SPDX-License-Identifier: Apache-2.0
+
 #include "kiso/time.h"
 
 #ifdef _WIN32
