@@ -4,6 +4,9 @@
 #ifndef VK_LIST_H
 #define VK_LIST_H
 
+// FIXME: Maybe this implementation is flawed... Maybe something like realloc and stuff should be used instead. Instead of storing pointer
+// Maybe uses index instead for the vk_api
+
 typedef struct VulkanPipeline {
     uint32_t vert_index;
     uint32_t frag_index;
