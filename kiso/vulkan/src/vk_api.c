@@ -169,7 +169,7 @@ static uint32_t Init(GraphicsApi *api) {
 
     log_trace("Creating pipeline list");
     VulkanPipelineListNew(&data->pipelines);
-    log_trace("Creating shader module list");
+    log_trace("Creating shaders module list");
     VulkanShaderModuleListNew(&data->shader_modules);
 
     log_info("Preparing built-in shaders");
@@ -183,15 +183,15 @@ static uint32_t Init(GraphicsApi *api) {
     constexpr size_t vertex_shader_code_size = sizeof(vertex_shader_code);
     constexpr size_t fragment_shader_code_size = sizeof(fragment_shader_code);
 
-    log_debug("Creating Vulkan default shader modules for vertex and fragment shaders");
-    log_trace("Creating default vertex shader");
+    log_debug("Creating Vulkan default shaders modules for vertex and fragment shaders");
+    log_trace("Creating default vertex shaders");
     VulkanShaderModule *vert;
     vk_result = api->CreateShader(api, vertex_shader_code, vertex_shader_code_size, (ShaderData *) &vert);
     if (vk_result != VK_SUCCESS) {
         PrintAndReturn(error_str, vk_result);
     }
     data->def_vert_shader = vert;
-    log_trace("Creating default fragment shader");
+    log_trace("Creating default fragment shaders");
     VulkanShaderModule *frag;
     vk_result = api->CreateShader(api, fragment_shader_code, fragment_shader_code_size, (ShaderData *) &frag);
     if (vk_result != VK_SUCCESS) {
@@ -360,7 +360,7 @@ static uint32_t CreateWindow(GraphicsApi *api, GLFWwindow **window, WindowCreate
 
     const uint32_t api_status = api->SetShader(api, prep_window_data, data->def_vert_shader, data->def_frag_shader);
     if (api_status != 0) {
-        PrintAndReturn("Cannot set shader", api_status);
+        PrintAndReturn("Cannot set shaders", api_status);
     }
 
     log_debug("Creating command pool");
@@ -545,7 +545,7 @@ static uint32_t CreateShader(GraphicsApi *api, const unsigned char *code, const 
 
     VulkanShaderModule *added;
     if (!VulkanShaderModuleListAdd(data->shader_modules, module, &added)) {
-        PrintAndReturn("Cannot add a new shader module", 1);
+        PrintAndReturn("Cannot add a new shaders module", 1);
     }
     *shader_data = added;
     return 0;
@@ -591,11 +591,11 @@ static uint32_t SetShader(GraphicsApi *api, WindowData window_data, ShaderData v
 
     const VulkanShaderModule *vertex_shader = VulkanShaderModuleListGet(data->shader_modules, ((VulkanShaderModule *) vertex)->index);
     if (vertex_shader == nullptr) {
-        PrintAndReturn("Vertex shader not exist", 1);
+        PrintAndReturn("Vertex shaders not exist", 1);
     }
     const VulkanShaderModule *fragment_shader = VulkanShaderModuleListGet(data->shader_modules, ((VulkanShaderModule *) fragment)->index);
     if (fragment_shader == nullptr) {
-        PrintAndReturn("Fragment shader not exist", 1);
+        PrintAndReturn("Fragment shaders not exist", 1);
     }
 
     const VkResult vk_result = CreateGraphicsPipeline(data->device,

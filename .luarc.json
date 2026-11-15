@@ -3,8 +3,5 @@
   "runtime": {
     "version": "LuaJIT",
     "enableLuaJITExtensions": true
-  },
-  "workspace.library": [
-    "kiso/lua/def"
-  ]
+  }
 }

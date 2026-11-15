@@ -1,0 +1,9 @@
+# yaml-language-server: $schema=./.kiso/kiso.schema.json
+
+app:
+  name: "%s"
+  entry_point: "main"
+
+  bundle:
+    # LuaRocks module to include here
+    # lua-cjson: "2.1.0.10-1"

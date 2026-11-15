@@ -18,7 +18,7 @@ VkResult CreateShaderModule(const unsigned char *code, const size_t code_size, c
 
     const VkResult result = vkCreateShaderModule(device, &create_info, nullptr, shader_module);
     if (result != VK_SUCCESS) {
-        RETURN_ERROR("Failed to create shader module", result);
+        RETURN_ERROR("Failed to create shaders module", result);
     }
     return VK_SUCCESS;
 }

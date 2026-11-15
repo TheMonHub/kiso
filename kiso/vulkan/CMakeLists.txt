@@ -49,17 +49,17 @@ endif ()
 # --------------------------------------------------
 
 file(GLOB_RECURSE GLSL_SOURCE_FILES
-        "../shader/*"
-        "../shader/*"
+        "../shaders/*"
+        "../shaders/*"
 )
 
 foreach (GLSL IN LISTS GLSL_SOURCE_FILES)
     file(RELATIVE_PATH RELATIVE_PATH
-            "${CMAKE_CURRENT_SOURCE_DIR}/../shader"
+            "${CMAKE_CURRENT_SOURCE_DIR}/../shaders"
             "${GLSL}"
     )
 
-    set(SPIRV "${PROJECT_BINARY_DIR}/shader/${RELATIVE_PATH}.spv")
+    set(SPIRV "${PROJECT_BINARY_DIR}/shaders/${RELATIVE_PATH}.spv")
 
     get_filename_component(OUTPUT_DIR "${SPIRV}" DIRECTORY)
 
@@ -81,5 +81,5 @@ add_custom_target(
 add_dependencies(KisoVulkan KisoSPRIVShader)
 
 target_compile_options(KisoVulkan PRIVATE
-        --embed-dir=${PROJECT_BINARY_DIR}/shader
+        --embed-dir=${PROJECT_BINARY_DIR}/shaders
 )
