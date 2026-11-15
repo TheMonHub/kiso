@@ -11,6 +11,7 @@ install(TARGETS KisoCli
 
 target_link_libraries(KisoCli
         KisoCore
+        args
 )
 
 target_include_directories(KisoCli PRIVATE
