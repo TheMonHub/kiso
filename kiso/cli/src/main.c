@@ -17,7 +17,7 @@ static int VersionCmdCallback(char* cmd_name, ArgParser* cmd_parser) {
     }
 
     printf("version number: %u\n", kProjectVersionNumber);
-    printf("commit: " PROJECT_GIT_COMMIT_HASH "\n");
+    printf("commit: " PROJECT_GIT_COMMIT_HASH_LONG "\n");
     printf("branch: " PROJECT_GIT_BRANCH "\n");
     return 0;
 }

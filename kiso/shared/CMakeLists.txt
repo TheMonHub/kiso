@@ -39,12 +39,21 @@ target_compile_definitions(KisoShared PUBLIC
 )
 
 if (GIT_COMMIT_HASH)
-    message(STATUS "Git commit: ${GIT_COMMIT_HASH}")
+    message(STATUS "Git short commit: ${GIT_COMMIT_HASH}")
     target_compile_definitions(KisoShared PUBLIC
             PROJECT_GIT_COMMIT_HASH="${GIT_COMMIT_HASH}"
     )
 else ()
-    message(WARNING "Could not get git commit hash")
+    message(WARNING "Could not get Git short commit hash")
+endif ()
+
+if (GIT_COMMIT_HASH_LONG)
+    message(STATUS "Git commit: ${GIT_COMMIT_HASH_LONG}")
+    target_compile_definitions(KisoShared PUBLIC
+            PROJECT_GIT_COMMIT_HASH_LONG="${GIT_COMMIT_HASH_LONG}"
+    )
+else ()
+    message(WARNING "Could not get Git commit hash")
 endif ()
 
 if (GIT_BRANCH)
@@ -53,7 +62,7 @@ if (GIT_BRANCH)
             PROJECT_GIT_BRANCH="${GIT_BRANCH}"
     )
 else ()
-    message(WARNING "Could not get git branch")
+    message(WARNING "Could not Get git branch")
 endif ()
 
 file(GLOB_RECURSE EMBED_FILES

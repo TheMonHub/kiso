@@ -37,7 +37,8 @@ typedef struct KisoIndent {
 
 typedef struct KisoManifest {
     KisoIndent indent;
-    char luajit_hash[40 + 1]
-    char entry_point[16 + 1];
+    char kiso_commit_hash[40 + 1]; // Must match the runtime
+    char entry_point[16 + 1]; // File name of the entry point with no
+                              //extension relative to the `code` directory
 } KisoManifest;
 ```
