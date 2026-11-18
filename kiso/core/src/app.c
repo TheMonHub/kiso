@@ -348,7 +348,7 @@ int RunAppFolder(const char *path, lua_State **out, const int argc, char *argv[]
     lua_setglobal(state, "kiso");
 
     static char bootLua[] = {
-#embed "boot.luabc"
+#embed "boot.luac"
     };
 
     if (luaL_loadbufferx(state, bootLua, sizeof(bootLua), "=kiso_boot", "b")) {

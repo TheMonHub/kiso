@@ -1,65 +1,76 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://kiso.dev/schemas/kiso.schema.json",
-  "title": "KISO Application Configuration",
-  "description": "Configuration schema for KISO applications.",
-  "type": "object",
-  "properties": {
-    "app": {
-      "title": "Application",
-      "description": "Defines the application's metadata and dependencies.",
-      "type": "object",
-      "properties": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://kiso.dev/schemas/kiso.schema.json",
+    "title": "KISO Application Configuration",
+    "description": "Defines the application's metadata and dependencies.",
+    "type": "object",
+    "properties": {
         "name": {
-          "title": "Application Name",
-          "description": "The display name of the application.",
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 64,
-          "pattern": "^[A-Za-z0-9 _.'()&+-]*[A-Za-z0-9_.'()&+-][A-Za-z0-9 _.'()&+-]*$",
-          "examples": [
-            "My Application",
-            "Worst Game Ever"
-          ]
+            "title": "Application Name",
+            "description": "The display name of the application.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9 _.'()&+-]*[A-Za-z0-9_.'()&+-][A-Za-z0-9 _.'()&+-]*$",
+            "examples": [
+                "My Application",
+                "Worst Game Ever"
+            ]
         },
         "entry_point": {
-          "title": "Entry Point",
-          "description": "Name of the application's main Lua entry point file without the file extension specified.",
-          "type": "string",
-          "pattern": "^[A-Za-z0-9]+$",
-          "examples": [
-            "main",
-            "bootstrap"
-          ]
-        },
-        "bundle": {
-          "title": "Dependency Bundle",
-          "description": "LuaRocks modules and their corresponding version. On pack or build, KISO will automatically include the listed modules.",
-          "type": "object",
-          "additionalProperties": {
+            "title": "Entry Point",
+            "description": "Name of the application's main Lua entry point file without the file extension specified.",
             "type": "string",
-            "description": "Required LuaRocks module version.",
-            "pattern": "^(\\*|[0-9]+(\\.[0-9]+)*(-[0-9]+)?)$",
+            "minLength": 1,
+            "maxLength": 16,
+            "pattern": "^[A-Za-z0-9]+$",
             "examples": [
-              "2.1.0.10-1"
+                "main",
+                "boot",
+                "start"
             ]
-          },
-          "examples": [
-            {
-              "lua-cjson": "2.1.0.10-1"
+        },
+        "deps": {
+            "title": "Dependencies",
+            "description": "LuaRocks modules and their configuration.",
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "version": {
+                        "title": "Version",
+                        "description": "Required LuaRocks module version.",
+                        "type": "string",
+                        "pattern": "^(\\*|[0-9]+(\\.[0-9]+)*(-[0-9]+)?)$",
+                        "examples": [
+                          "2.1.0.10-1"
+                        ]
+                    },
+                    "repository": {
+                        "title": "Repository",
+                        "description": "LuaRocks server to use for this dependency. Defaults to https://luarocks.org.",
+                        "type": "string",
+                        "format": "uri",
+                        "pattern": "^https://",
+                        "examples": [
+                            "https://luarocks.org",
+                            "https://luarocks.org/dev",
+                            "https://luarocks.org/manifests/myuser",
+                            "https://luarocks.org/m/myproject",
+                            "https://luarocks.org/m/myproject/dev"
+                        ]
+                    }
+                  },
+                  "required": [
+                      "version"
+                  ],
+                "additionalProperties": false
             }
-          ]
         }
-      },
-      "required": [
-        "name",
-        "entry_point"
-      ],
-      "additionalProperties": false
-    }
-  },
-  "required": [
-    "app"
-  ],
-  "additionalProperties": false
+    },
+    "required": [
+      "name",
+      "entry_point"
+    ],
+    "additionalProperties": false
 }

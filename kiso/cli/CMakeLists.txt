@@ -4,6 +4,7 @@ add_executable(KisoCli
         src/verify.h
         src/new_cmd_callback.h
         src/run_cmd_callback.h
+        src/pack_cmd_callback.h
 )
 
 set_target_properties(KisoCli PROPERTIES OUTPUT_NAME "kiso")

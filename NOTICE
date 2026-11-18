@@ -22,6 +22,10 @@ This software uses the LuaJIT scripting language
 (https://luajit.org/), which is distributed under the
 MIT license.
 
+This software uses libarchive for its packaging system
+(https://github.com/libarchive/libarchive/), which the
+license can be viewed from its source.
+
 MIT license: https://opensource.org/license/mit
 zlib license: https://opensource.org/license/zlib
 0BSD license: https://opensource.org/license/0bsd

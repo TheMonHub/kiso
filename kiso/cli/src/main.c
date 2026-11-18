@@ -7,7 +7,7 @@
 #include "kiso/version.h"
 #include "new_cmd_callback.h"
 #include "run_cmd_callback.h"
-
+#include "pack_cmd_callback.h"
 
 static int VersionCmdCallback(char* cmd_name, ArgParser* cmd_parser) {
     printf("kiso version " PROJECT_VERSION_STRING "\n");
@@ -22,7 +22,7 @@ static int VersionCmdCallback(char* cmd_name, ArgParser* cmd_parser) {
     return 0;
 }
 
-// TODO: Implement the rest of the commands. new, run, pack, build.
+// TODO: Implement the rest of the commands. run, pack, build.
 int main(const int argc, char *argv[]) {
     fprintf(stderr, "KISO CLI is still unfinished, please do not use this in any production environment.\n");
     ArgParser* parser = ap_new_parser();
@@ -36,7 +36,7 @@ int main(const int argc, char *argv[]) {
                             "   new        Create a new project\n"
                             "   run        Run a project from a folder or .kiso file\n"
                             "   pack       Pack a project into a .kiso file\n"
-                            "   build      Build a project from a folder or .kiso file\n"
+                            "   build      Build a project from a .kiso file\n"
                             "   version    Show the current version of KISO\n"
                             "See 'kiso help <command>' to read about a specific subcommand."
     );
@@ -95,6 +95,25 @@ int main(const int argc, char *argv[]) {
                                     "Options:\n"
                                     "   none           Every option and flags after path are passed through the program");
     ap_set_cmd_callback(run_cmd_parser, RunCmdCallback);
+
+    ArgParser *pack_cmd_parser = ap_new_cmd(parser, "pack");
+    if (!pack_cmd_parser) {
+        return 1;
+    }
+
+    ap_set_helptext(pack_cmd_parser, "usage: kiso pack [<path>]\n"
+                                     "\n"
+                                     "Description:\n"
+                                     "   Pack a KISO project from the given path.\n"
+                                     "   Defaults to current directory if not specified.\n"
+                                     "\n"
+                                     "Arguments:\n"
+                                     "   path           Path to the project\n"
+                                     "\n"
+                                     "Options:\n"
+                                     "   -v, --verbose  Print verbose output");
+    ap_add_flag(pack_cmd_parser, "v verbose");
+    ap_set_cmd_callback(pack_cmd_parser, PackCmdCallback);
 
     if (!ap_parse(parser, argc, argv)) {
         return 1;
