@@ -11,21 +11,26 @@ directly.
 
 The file must contain a directory named `code` which contains the lua
 bytecode of the application. The bytecode file should have the original
-filename of the Lua source file referencable by the written Lua code
+filename of the Lua source file usable by the written Lua code
 and must have the `.luac` extension.
 
 The file must contain a directory named `data` which contains the
 data files of the application. The data file should have the original
-filename of the data file referencable by the written Lua code and
+filename of the data file usable by the written Lua code and
 must have the original extension.
 
-The file must contain a directory named `shaders` which contains the shader
-SPIR-V bytecode of the application. The bytecode file should have the original
-filename of the shader source file referencable by the written Lua code and
-must have the `.spv` extension.
+The file must contain a directory named `extern` which contains the
+modules and libraries that the application depends on. The files must
+have the same folder structure as the module or library usable
+through require function by the written Lua code.
 
-And a file named `manifest` which contains the application manifest encoded
-in little endian and can be referenced by this C definition.
+The file must contain a directory named `shaders` which contains the
+shader SPIR-V bytecode of the application. The bytecode file should
+have the original filename of the shader source file usable by the
+written Lua code and must have the `.spv` extension.
+
+And a file named `manifest` which contains the application manifest
+encoded in little endian and can be referenced by this C definition.
 
 The current version is `1`.
 
